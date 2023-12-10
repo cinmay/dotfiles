@@ -1,5 +1,14 @@
 # neovim-config
 
+## ToDo
+* Autoformating
+* Spellchecking
+* Pretier
+* Typescript
+* Linter
+* Testing
+* Nerd Font
+* Copilot
 
 ## Install Neovim
 
