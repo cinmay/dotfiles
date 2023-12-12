@@ -9,6 +9,11 @@
 * Testing
 * Nerd Font
 * Copilot
+* Multi clipboard
+* Harpoon
+* Show line numbers with git changes
+* Relative line numbers
+
 
 ## Install Neovim
 
