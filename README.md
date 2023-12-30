@@ -17,6 +17,7 @@
 * Tmux 
 * Markdown preview
 * Autosave
+* Show hidden files in telescope
 
 ## Done
 * Show line numbers with git changes
