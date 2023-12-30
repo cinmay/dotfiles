@@ -12,7 +12,6 @@
 * Copilot
 * Multi clipboard
 * Harpoon
-* Relative line numbers
 * Emojis 
 * Telescope ignore node_modules
 * Tmux 
@@ -21,6 +20,7 @@
 
 ## Done
 * Show line numbers with git changes
+* Relative line numbers
 
 ## Install Neovim
 
