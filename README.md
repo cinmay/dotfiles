@@ -7,13 +7,20 @@
 * Typescript
 * Linter
 * Testing
+* Breakepoints
 * Nerd Font
 * Copilot
 * Multi clipboard
 * Harpoon
-* Show line numbers with git changes
 * Relative line numbers
+* Emojis 
+* Telescope ignore node_modules
+* Tmux 
+* Markdown preview
+* Autosave
 
+## Done
+* Show line numbers with git changes
 
 ## Install Neovim
 
