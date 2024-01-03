@@ -13,15 +13,16 @@
 * Multi clipboard
 * Harpoon
 * Emojis 
-* Telescope ignore node_modules
-* Tmux 
 * Markdown preview
 * Autosave
 * Show hidden files in telescope
+* Screen reader
 
 ## Done
 * Show line numbers with git changes
 * Relative line numbers
+* Telescope ignore node_modules
+* Tmux 
 
 ## Install Neovim
 
