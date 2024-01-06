@@ -9,9 +9,7 @@
 * Testing
 * Breakepoints
 * Nerd Font
-* Copilot
 * Multi clipboard
-* Harpoon
 * Emojis 
 * Markdown preview
 * Autosave
@@ -23,6 +21,8 @@
 * Relative line numbers
 * Telescope ignore node_modules
 * Tmux 
+* Harpoon
+* Copilot
 
 ## Install Neovim
 
@@ -43,3 +43,6 @@ make CMAKE_EXTRA_FLAGS="-DCMAKE_INSTALL_PREFIX=$HOME/neovim" CMAKE_BUILD_TYPE=Re
 make install
 export PATH="$HOME/neovim/bin:$PATH" # add to .bashrc
 ```
+
+## Install Typescript
+run :Mason

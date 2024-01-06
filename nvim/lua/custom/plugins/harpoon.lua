@@ -10,7 +10,8 @@ return{
 		end
 		map("<c-h>", function() harpoon:list():append() end)
 		map("<c-m>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end)
-		map("<c-n>", function() harpoon:list():select(1) end)
+map("<c-n>", function() harpoon:list():select(1) end)
+
 		map("<c-e>", function() harpoon:list():select(2) end)
 		map("<c-i>", function() harpoon:list():select(3) end)
 		map("<c-o>", function() harpoon:list():select(4) end)

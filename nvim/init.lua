@@ -197,9 +197,8 @@ require('lazy').setup({
       vim.cmd.colorscheme 'onedark'
       vim.o.background = "dark"
     vim.o.termguicolors = true
-    vim.o.background = "dark"
     vim.cmd [[
-        silent! colorscheme snow
+        silent! colorscheme onedark:
         hi Normal guibg=#000000
     ]]
     end,

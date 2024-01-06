@@ -28,3 +28,16 @@ Next window
 Toggle last active window
 
 **ctrl + b l**
+
+## Vim
+### Copilot
+Accept suggestion
+** ctrl + enter **
+
+next suggestion
+** ctrl + y **
+
+previous suggestion
+** ctrl + u **
+
+
