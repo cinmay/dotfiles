@@ -1,0 +1,63 @@
+[
+  {
+    "name": "Tmux",
+    "commands": [
+      {
+        "name": "Create window",
+        "command": "ctrl + b c"
+      },
+      {
+        "name": "Rename current window",
+        "command": "ctrl + b ,"
+      },
+      {
+        "name": "Close current window",
+        "command": "ctrl + b & "
+      },
+      {
+        "name": "List windows ",
+        "command": "ctrl + b w"
+      },
+      {
+        "name": "Previous window",
+        "command": "ctrl + b p"
+      },
+      {
+        "name": "Next window",
+        "command": "ctrl + b n"
+      },
+      {
+        "name": "Toggle last active window",
+        "command": "ctrl + b l"    
+      }
+    ]
+  },
+  {
+    "name": "Copilot",
+    "commands": [
+      {
+        "name": "Accept suggestion",
+        "command": "ctrl + enter"
+      },
+      {
+        "name": "next suggestion",
+        "command": "ctrl + y"
+      },
+      {
+        "name": "previous suggestion",
+        "command": "ctrl + u"
+      }
+    ]
+  },
+  {
+    "name": "Vim",
+    "commands": [
+      {
+        "name": "Toggle autosaave",
+        "command": "vim command ASToggle"
+      }
+    ]
+  }
+]
+
+
