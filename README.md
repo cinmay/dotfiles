@@ -12,7 +12,6 @@
 * Multi clipboard
 * Emojis 
 * Markdown preview
-* Autosave
 * Show hidden files in telescope
 * Screen reader
 * Printable Keyboard shortcuts
@@ -25,6 +24,7 @@
 * Tmux 
 * Harpoon
 * Copilot
+* Autosave
 
 ## Install Neovim
 
