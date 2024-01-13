@@ -1,10 +1,10 @@
 function sum(a:Number, b:Number) {
 
-  if (a === b) {
-    console.log("a is equal to b");
+        if (a === b) {
+console.log("a is equal to b");
     
-  }
-  else {
+}
+      else {
     console.log("a is not equal to b");
   }
   if (a < b) {

@@ -15,6 +15,8 @@
 * Autosave
 * Show hidden files in telescope
 * Screen reader
+* Printable Keyboard shortcuts
+* Zoom in and out
 
 ## Done
 * Show line numbers with git changes
