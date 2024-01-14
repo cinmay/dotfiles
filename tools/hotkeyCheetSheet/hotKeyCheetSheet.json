@@ -61,6 +61,35 @@
         "command": ":%s/old/new/g"
       }
     ]
+  },
+  {
+    "name": "Spell checker",
+    "commands": [
+      {
+        "name": "Toggle spell checker",
+        "command": ":setlocal spell!"
+      },
+      {
+        "name": "Next misspelled word",
+        "command": "]s"
+      },
+      {
+        "name": "Previous misspelled word",
+        "command": "[s"
+      },
+      {
+        "name": "Correct word",
+        "command": "z="
+      },
+      {
+        "name": "Add word to dictionary",
+        "command": "zg"
+      },
+      {
+        "name": "Remove word from dictionary",
+        "command": "zw"
+      }
+    ]
   }
 ]
 

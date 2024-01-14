@@ -1,8 +1,7 @@
 # neovim-config
 
 ## ToDo
-* Autoformating
-* Spellchecking
+* Autoformatting
 * Pretier
 * Typescript
 * Linter
@@ -15,6 +14,8 @@
 * Show hidden files in telescope
 * Screen reader
 * Zoom in and out
+* 80 line ruler
+* Vim be good
 
 ## Done
 * Show line numbers with git changes
@@ -25,6 +26,7 @@
 * Copilot
 * Autosave
 * Printable Keyboard shortcuts
+* Spellchecking
 
 ## Install Neovim
 

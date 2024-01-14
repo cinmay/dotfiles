@@ -319,6 +319,10 @@ vim.o.completeopt = 'menuone,noselect'
 -- NOTE: You should make sure your terminal supports this
 vim.o.termguicolors = true
 
+-- Set defalt spelllang
+vim.o.spelllang = 'en_us,nb_no'
+vim.o.spell = true
+
 -- [[ Basic Keymaps ]]
 
 -- Keymaps for better default experience
