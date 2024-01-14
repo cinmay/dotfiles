@@ -6,21 +6,9 @@ const htlmHeader = `<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <title>Hotkey Cheetsheet</title>
-    <style>
-	body {
-	    font-family: sans-serif;
-	}
-	table {
-	    border-collapse: collapse;
-	}
-	td {
-	    padding: 0.5em;
-	    border: 1px solid #ccc;
-	}
-	td:first-child {
-	    font-weight: bold;
-	}
-    </style>
+	<link rel="stylesheet" href="./hotKeyCheetSheet.css">
+	<script src="https://kit.fontawesome.com/1c9c7c4c6b.js" crossorigin="anonymous"></script>
+
 </head>
 <body>
 `;
@@ -32,7 +20,11 @@ const htmlFooter = `
 
 
 const header = `
-<h1>Hotkey Cheetsheet</h1>
+<div class="card">
+    <div class="card-header">
+    <h1>Hotkey Cheetsheet</h1>
+    </div>
+</div>
 `;
 
 type HotkeyGroup = {
@@ -47,37 +39,78 @@ type HotkeyGroup = {
 const data = untypedData as HotkeyGroup[];
 console.log(data, "data");
 
-const tableRows = data.map( group => {
-	const groupRows = group.commands.map( command => {
+const appCards = data.map( group => {
+	const card = group.commands.map( command => {
 		return `
-		<tr>
-		    <td>${command.name}</td>
-		    <td>${command.command}</td>
-		</tr>
+		<div class="card-body">
+		    <div class="command-name">
+			<i class="fa-solid fa-terminal"></i>
+			${command.name}
+		    </div>
+		    <div class="command">
+			${command.command}
+		    </div>
+		</div>
 		`;
 	}
 	).join('\n');
 	return `
-	<tr>
-	    <td colspan="2">${group.name}</td>
-	</tr>
-	${groupRows}
+	<div class="card">
+	    <div class="card-header">
+		${group.name}
+	    </div>
+	    ${card}
+	</div>
 	`;
 }
 ).join('\n');
 
-const table = `
-<table>
-	${tableRows}
-</table>
+const flex = `
+<div class="flex-container">
+    ${appCards}
+</div>
 `;
 
-
-
 const htmlPage = htlmHeader + 
-	header +
-    	table +
+	flex +
 	htmlFooter; 
 
 
 fs.writeFileSync('./hotKeyCheetSheet.html', htmlPage );
+
+const css = `
+body {
+	font-family: sans-serif;
+	height: 80rem;
+	-webkit-print-color-adjust: exact !important;
+}
+.flex-container {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1em;
+}
+.card {
+	border: 1px solid #ccc;
+	border-radius: 0.5em;
+	width: 20em;
+}
+.card-header {
+	background-color: #ccc;
+	padding: 0.25em;
+	font-weight: bold;
+	font-size: 1.5em;
+}
+.card-body {
+	padding: 0.5em;
+}
+.command-name {
+	font-size: 1.25em;
+}
+.command {
+	font-weight: bold;
+	background-color: #eee;
+}
+`;
+
+fs.writeFileSync('./hotKeyCheetSheet.css', css );
+

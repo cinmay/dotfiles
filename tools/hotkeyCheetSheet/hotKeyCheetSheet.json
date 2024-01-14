@@ -53,8 +53,8 @@
     "name": "Vim",
     "commands": [
       {
-        "name": "Toggle autosaave",
-        "command": "vim command ASToggle"
+        "name": "Toggle autosave",
+        "command": ":ASToggle"
       }
     ]
   }
