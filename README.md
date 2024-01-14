@@ -14,7 +14,6 @@
 * Markdown preview
 * Show hidden files in telescope
 * Screen reader
-* Printable Keyboard shortcuts
 * Zoom in and out
 
 ## Done
@@ -25,6 +24,7 @@
 * Harpoon
 * Copilot
 * Autosave
+* Printable Keyboard shortcuts
 
 ## Install Neovim
 
@@ -48,3 +48,9 @@ export PATH="$HOME/neovim/bin:$PATH" # add to .bashrc
 
 ## Install Typescript
 run :Mason
+Use ctrl + f to search for the language you want to install
+
+## Find keybindings
+run :Verbose map <the keybinding> e.g. :Verbose map <leader>g
+
+

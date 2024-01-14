@@ -55,6 +55,10 @@
       {
         "name": "Toggle autosave",
         "command": ":ASToggle"
+      },
+      {
+        "name": "Find and replace",
+        "command": ":%s/old/new/g"
       }
     ]
   }
