@@ -195,11 +195,10 @@ require('lazy').setup({
     config = function()
       vim.g.onedark_config = { style = 'deep' }
       vim.cmd.colorscheme 'onedark'
-      vim.o.background = "dark"
-    vim.o.termguicolors = true
     vim.cmd [[
         silent! colorscheme onedark:
         hi Normal guibg=#000000
+        hi EndOfBuffer guibg=#000000
     ]]
     end,
     priority = 1000,
