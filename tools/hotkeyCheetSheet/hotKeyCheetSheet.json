@@ -28,7 +28,7 @@
       },
       {
         "name": "Toggle last active window",
-        "command": "ctrl + b l"    
+        "command": "ctrl + b l"
       }
     ]
   },
@@ -92,5 +92,3 @@
     ]
   }
 ]
-
-

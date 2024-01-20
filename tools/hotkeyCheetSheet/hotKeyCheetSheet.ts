@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import untypedData from './hotKeyCheetSheet.json' ;
+import untypedData from './hotKeyCheetSheet.json';
 
 const htlmHeader = `<!DOCTYPE html>
 <html lang="en">
@@ -28,7 +28,7 @@ const header = `
 `;
 
 type HotkeyGroup = {
-    	name: string;
+	name: string;
 	commands: {
 		name: string;
 		command: string;
@@ -39,8 +39,8 @@ type HotkeyGroup = {
 const data = untypedData as HotkeyGroup[];
 console.log(data, "data");
 
-const appCards = data.map( group => {
-	const card = group.commands.map( command => {
+const appCards = data.map(group => {
+	const card = group.commands.map(command => {
 		return `
 		<div class="card-body">
 		    <div class="command-name">
@@ -71,12 +71,12 @@ const flex = `
 </div>
 `;
 
-const htmlPage = htlmHeader + 
+const htmlPage = htlmHeader +
 	flex +
-	htmlFooter; 
+	htmlFooter;
 
 
-fs.writeFileSync('./hotKeyCheetSheet.html', htmlPage );
+fs.writeFileSync('./hotKeyCheetSheet.html', htmlPage);
 
 const css = `
 body {
@@ -112,5 +112,5 @@ body {
 }
 `;
 
-fs.writeFileSync('./hotKeyCheetSheet.css', css );
+fs.writeFileSync('./hotKeyCheetSheet.css', css);
 
