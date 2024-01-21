@@ -1,7 +1,6 @@
 # neovim-config
 
 ## ToDo
-* Autoformatting
 * Pretier
 * Typescript
 * Linter
@@ -27,6 +26,7 @@
 * Autosave
 * Printable Keyboard shortcuts
 * Spellchecking
+* Autoformatting
 
 ## Install Neovim
 

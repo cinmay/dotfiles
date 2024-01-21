@@ -90,5 +90,9 @@
         "command": "zw"
       }
     ]
+  },
+  {
+    "name": "Vim navigation",
+    "commands": []
   }
 ]
