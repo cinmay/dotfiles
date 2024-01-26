@@ -59,6 +59,10 @@
       {
         "name": "Find and replace",
         "command": ":%s/old/new/g"
+      },
+      {
+        "name": "New empty buffer",
+        "command": ":enew"
       }
     ]
   },

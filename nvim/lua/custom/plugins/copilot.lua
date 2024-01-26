@@ -6,9 +6,9 @@ return {
         enabled = true,
         auto_trigger = true,
         keymap = {
-          accept = "<C-CR>",
-          next = "<C-y>",
-          prev = "<C-u>",
+          accept = "<C-y>",
+          next = "<C-u>",
+          prev = "<C-l>",
         },
       },
       panel = {

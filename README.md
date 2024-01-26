@@ -11,10 +11,10 @@
 * Emojis 
 * Markdown preview
 * Show hidden files in telescope
-* Screen reader
+* Find better voice for text to speech
 * Zoom in and out
-* 80 line ruler
 * Vim be good
+* Lazygit
 
 ## Done
 * Show line numbers with git changes
@@ -27,6 +27,7 @@
 * Printable Keyboard shortcuts
 * Spellchecking
 * Autoformatting
+* 80 line ruler
 
 ## Install Neovim
 

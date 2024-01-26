@@ -324,8 +324,9 @@ vim.o.spell = true
 
 -- Text to speech setup
 vim.keymap.set('v', 'r', ':w !setsid espeak<cr><cr>')
---vim.keymap.set('v', '<C-r>', ':w !setsid -f say<cr><cr>')
---vim.keymap.set('v', '<C-t>', ':w !setsid -f festival --tts <cr><cr>')
+
+-- Show 80 char limit
+vim.opt.colorcolumn = "80"
 
 -- [[ Basic Keymaps ]]
 
