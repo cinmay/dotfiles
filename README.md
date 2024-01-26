@@ -28,6 +28,7 @@
 * Spellchecking
 * Autoformatting
 * 80 line ruler
+* Center window
 
 ## Install Neovim
 
