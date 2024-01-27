@@ -281,7 +281,7 @@ require('lazy').setup({
 -- NOTE: You can change these options as you wish!
 
 -- Set highlight on search
-vim.o.hlsearch = false
+vim.o.hlsearch = true
 
 -- Make line numbers default
 vim.wo.number = true
@@ -322,13 +322,13 @@ vim.o.termguicolors = true
 vim.o.spelllang = 'en_us'
 vim.o.spell = true
 
+-- Add text to speech
 local isReading = false
 local read_text = function()
   if isReading then
     vim.cmd('silent! !pkill espeak &')
     isReading = false
   else
-    -- vim.cmd('.,$w !setsid espeak | silent &&')
     vim.cmd('silent! .,$w !setsid espeak &')
     isReading = true
   end
@@ -338,6 +338,14 @@ vim.keymap.set('n', '<c-r>', read_text, { desc = 'Read Text' })
 
 -- Show 80 char limit
 vim.opt.colorcolumn = "80"
+
+-- Remap <c-d> and <c-u> to center cursor on screen.
+vim.keymap.set("n", "<C-d>", "<C-d>zz")
+vim.keymap.set("n", "<C-u>", "<C-u>zz")
+
+-- Remap n and N to center cursor on screen.
+vim.keymap.set("n", "n", "nzzzv")
+vim.keymap.set("n", "N", "Nzzzv")
 
 -- [[ Basic Keymaps ]]
 

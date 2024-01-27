@@ -97,6 +97,103 @@
   },
   {
     "name": "Vim navigation",
-    "commands": []
+    "commands": [
+      {
+        "name": "Move half page down",
+        "command": "ctrl + d"
+      },
+      {
+        "name": "Move half page up",
+        "command": "ctrl + u"
+      },
+      {
+        "name": "Move to the end of the line",
+        "command": "$"
+      },
+      {
+        "name": "Move to the beginning of the line",
+        "command": "^"
+      },
+      {
+        "name": "Move to the end of the file",
+        "command": "G"
+      },
+      {
+        "name": "Move to the beginning of the file",
+        "command": "gg"
+      },
+      {
+        "name": "Move to the next word",
+        "command": "w"
+      },
+      {
+        "name": "Move to the previous word",
+        "command": "b"
+      },
+      {
+        "name": "Move to the next paragraph",
+        "command": "}"
+      },
+      {
+        "name": "Move to the previous paragraph",
+        "command": "{"
+      },
+      {
+        "name": "Move to the next sentence",
+        "command": ")"
+      },
+      {
+        "name": "Move to the previous sentence",
+        "command": "("
+      },
+      {
+        "name": "Move to the next match",
+        "command": "%"
+      },
+      {
+        "name": "Move to the next line",
+        "command": "+"
+      },
+      {
+        "name": "Move to the previous line",
+        "command": "-"
+      },
+      {
+        "name": "Move to the next character",
+        "command": "l"
+      },
+      {
+        "name": "Move to the previous character",
+        "command": "h"
+      },
+      {
+        "name": "Move to the next match",
+        "command": "f"
+      },
+      {
+        "name": "Move to the previous match",
+        "command": "F"
+      },
+      {
+        "name": "Move to the next match",
+        "command": "t"
+      },
+      {
+        "name": "Move to the previous match",
+        "command": "T"
+      },
+      {
+        "name": "Move to the next match",
+        "command": ";"
+      },
+      {
+        "name": "Move to the previous match",
+        "command": ","
+      },
+      {
+        "name": "Move to the next match",
+        "command": "*"
+      }
+    ]
   }
 ]
