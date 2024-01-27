@@ -325,10 +325,11 @@ vim.o.spell = true
 local isReading = false
 local read_text = function()
   if isReading then
-    vim.cmd('!pkill espeak & <CR>')
+    vim.cmd('silent! !pkill espeak &')
     isReading = false
   else
-    vim.cmd('.,$w !setsid espeak &')
+    -- vim.cmd('.,$w !setsid espeak | silent &&')
+    vim.cmd('silent! .,$w !setsid espeak &')
     isReading = true
   end
 end
