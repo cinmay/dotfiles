@@ -319,11 +319,21 @@ vim.o.completeopt = 'menuone,noselect'
 vim.o.termguicolors = true
 
 -- Set defalt spelllang
-vim.o.spelllang = 'en_us,nb_no'
+vim.o.spelllang = 'en_us'
 vim.o.spell = true
 
--- Text to speech setup
-vim.keymap.set('v', 'r', ':w !setsid espeak<cr><cr>')
+local isReading = false
+local read_text = function()
+  if isReading then
+    vim.cmd('!pkill espeak & <CR>')
+    isReading = false
+  else
+    vim.cmd('.,$w !setsid espeak &')
+    isReading = true
+  end
+end
+
+vim.keymap.set('n', '<c-r>', read_text, { desc = 'Read Text' })
 
 -- Show 80 char limit
 vim.opt.colorcolumn = "80"

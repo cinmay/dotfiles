@@ -15,6 +15,9 @@
 * Zoom in and out
 * Vim be good
 * Lazygit
+* Fix harpoon to work with autosave
+* Add a nice start screen
+* Add custom keybindings to telescope help text
 
 ## Done
 * Show line numbers with git changes
