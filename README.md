@@ -2,23 +2,27 @@
 
 ## ToDo Kanban
 
-| Backlog                 | Preperation | Wip | Final inspection | Done                           |
-| ----------------------- | ----------- | --- | ---------------- | ------------------------------ |
-| Tesing                  |             |     | Prettier         | Spellchecking                  |
-| Breakpoints             |             |     |                  | Relative line numbers          |
-| Nerd Font               |             |     |                  | Telerscope ignore node_modules |
-| LasyGit                 |             |     |                  | Tmux                           |
-| Multi clipboard         |             |     |                  | Harpoon                        |
-| Emojis                  |             |     |                  | Copilot                        |
-| Markdown preview        |             |     |                  | Autosave                       |
-| Zoom in and out         |             |     |                  | Printable Keyboard shortcuts   |
-| Vim be good             |             |     |                  | Autoformatting                 |
-| Telescope show hidden   |             |     |                  | 80 line ruler                  |
-| TTS better voice        |             |     |                  | Center window                  |
-| Fix, Harpoon autosave   |             |     |                  | Pretier                        |
-| Add nice start screen   |             |     |                  | Typescript                     |
-| Add telescope help text |             |     |                  | Linter                         |
-| Install trouble? or not |             |     |                  | Kanban                         |
+| Backlog                  | Preperation | Wip | Final inspection | Done                           |
+| ------------------------ | ----------- | --- | ---------------- | ------------------------------ |
+| Tesing                   |             |     | Prettier         | Spellchecking                  |
+| Breakpoints              |             |     |                  | Relative line numbers          |
+| Nerd Font                |             |     |                  | Telerscope ignore node_modules |
+| LasyGit                  |             |     |                  | Tmux                           |
+| Multi clipboard          |             |     |                  | Harpoon                        |
+| Emojis                   |             |     |                  | Copilot                        |
+| Markdown preview         |             |     |                  | Autosave                       |
+| Zoom in and out          |             |     |                  | Printable Keyboard shortcuts   |
+| Vim be good              |             |     |                  | Autoformatting                 |
+| Telescope show hidden    |             |     |                  | 80 line ruler                  |
+| TTS better voice         |             |     |                  | Center window                  |
+| Fix, Harpoon autosave    |             |     |                  | Pretier                        |
+| Add nice start screen    |             |     |                  | Typescript                     |
+| Add telescope help text  |             |     |                  | Linter                         |
+| Install trouble? or not  |             |     |                  | Kanban                         |
+| Tmux styling             |             |     |                  |                                |
+| Set default terminal     |             |     |                  |                                |
+| Add dependencies reademe |             |     |                  |                                |
+| Fix: Prettier in markdow |             |     |                  |                                |
 
 ## Install Neovim
 

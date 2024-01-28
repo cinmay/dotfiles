@@ -39,15 +39,33 @@ return {
         local client = vim.lsp.get_client_by_id(client_id)
         local bufnr = args.buf
 
-        -- Only attach to clients that support document formatting
-        if not client.server_capabilities.documentFormattingProvider then
-          return
+        -- Json options
+        if client.name == 'jsonls' then
+          vim.api.nvim_create_autocmd('BufWritePre', {
+            buffer = bufnr,
+            command = "Prettier",
+          })
         end
 
         -- Tsserver usually works poorly. Sorry you work with bad languages
-        -- You can remove this line if you know what you're doing :)
+        -- Use prettier for formatting
         if client.name == 'tsserver' then
-          vim.cmd([[ autocmd BufWritePre <buffer> :%!prettierd % ]])
+          vim.api.nvim_create_autocmd('BufWritePre', {
+            buffer = bufnr,
+            command = "Prettier",
+          })
+        end
+
+        -- Markdown options
+        if client.name == 'marksman' then
+          vim.api.nvim_create_autocmd('BufWritePre', {
+            buffer = bufnr,
+            command = "Prettier",
+          })
+        end
+
+        -- Only attach to clients that support document formatting
+        if not client.server_capabilities.documentFormattingProvider then
           return
         end
 

@@ -1,8 +1,8 @@
-import * as fs from 'fs';
-import untypedData from './hotKeyCheetSheet.json';
+import * as fs from "fs";
+import untypedData from "./hotKeyCheetSheet.json";
 
 const htlmHeader = `<!DOCTYPE html>
-<html lang="en">
+    <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Hotkey Cheetsheet</title>
@@ -17,7 +17,6 @@ const htmlFooter = `
 </body>
 </html>
 `;
-
 
 const header = `
 <div class="card">
@@ -35,13 +34,14 @@ type HotkeyGroup = {
 	}[];
 };
 
-
 const data = untypedData as HotkeyGroup[];
 console.log(data, "data");
 
-const appCards = data.map(group => {
-	const card = group.commands.map(command => {
-		return `
+const appCards = data
+	.map((group) => {
+		const card = group.commands
+			.map((command) => {
+				return `
 		<div class="card-body">
 		    <div class="command-name">
 			<i class="fa-solid fa-terminal"></i>
@@ -52,9 +52,9 @@ const appCards = data.map(group => {
 		    </div>
 		</div>
 		`;
-	}
-	).join('\n');
-	return `
+			})
+			.join("\n");
+		return `
 	<div class="card">
 	    <div class="card-header">
 		${group.name}
@@ -62,8 +62,8 @@ const appCards = data.map(group => {
 	    ${card}
 	</div>
 	`;
-}
-).join('\n');
+	})
+	.join("\n");
 
 const flex = `
 <div class="flex-container">
@@ -71,12 +71,9 @@ const flex = `
 </div>
 `;
 
-const htmlPage = htlmHeader +
-	flex +
-	htmlFooter;
+const htmlPage = htlmHeader + flex + htmlFooter;
 
-
-fs.writeFileSync('./hotKeyCheetSheet.html', htmlPage);
+fs.writeFileSync("./hotKeyCheetSheet.html", htmlPage);
 
 const css = `
 body {
@@ -112,5 +109,4 @@ body {
 }
 `;
 
-fs.writeFileSync('./hotKeyCheetSheet.css', css);
-
+fs.writeFileSync("./hotKeyCheetSheet.css", css);
