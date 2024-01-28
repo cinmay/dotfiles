@@ -18,6 +18,7 @@
 * Fix harpoon to work with autosave
 * Add a nice start screen
 * Add custom keybindings to telescope help text
+* Should I install the trouble plugin?
 
 ## Done
 * Show line numbers with git changes
@@ -60,4 +61,8 @@ Use ctrl + f to search for the language you want to install
 ## Find keybindings
 run :Verbose map <the keybinding> e.g. :Verbose map <leader>g
 
-
+## Rebuild hotkey cheat sheet
+``` bash
+cd tools/hotkeyCheetSheet 
+npx nodemon hotKeyCheetSheet.ts
+```

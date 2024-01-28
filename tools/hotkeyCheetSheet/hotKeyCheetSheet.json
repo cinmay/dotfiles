@@ -67,6 +67,15 @@
     ]
   },
   {
+    "name": "Coding tools",
+    "commands": [
+      {
+        "name": "Open diagnostics",
+        "command": "leader + e"
+      }
+    ]
+  },
+  {
     "name": "Spell checker",
     "commands": [
       {
