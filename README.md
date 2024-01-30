@@ -4,7 +4,7 @@
 
 | Backlog                  | Preperation | Wip | Final inspection | Done                           |
 | ------------------------ | ----------- | --- | ---------------- | ------------------------------ |
-| Tesing                   |             |     | Prettier         | Spellchecking                  |
+| Tesing                   |             |     |                  | Spellchecking                  |
 | Breakpoints              |             |     |                  | Relative line numbers          |
 | Nerd Font                |             |     |                  | Telerscope ignore node_modules |
 | LasyGit                  |             |     |                  | Tmux                           |
@@ -19,10 +19,10 @@
 | Add nice start screen    |             |     |                  | Typescript                     |
 | Add telescope help text  |             |     |                  | Linter                         |
 | Install trouble? or not  |             |     |                  | Kanban                         |
-| Tmux styling             |             |     |                  |                                |
-| Set default terminal     |             |     |                  |                                |
+| Tmux styling             |             |     |                  | Prettier                       |
+| Set default terminal     |             |     |                  | Prettier add html, css, yaml   |
 | Add dependencies reademe |             |     |                  |                                |
-| Fix: Prettier in markdow |             |     |                  |                                |
+|                          |             |     |                  |                                |
 
 ## Install Neovim
 
