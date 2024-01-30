@@ -105,6 +105,19 @@
     ]
   },
   {
+    "name": "kitty",
+    "commands": [
+      {
+        "name": "Zoom out",
+        "command": "ctrl + shift + +"
+      },
+      {
+        "name": "Zoom in",
+        "command": "ctrl + shift + -"
+      }
+    ]
+  },
+  {
     "name": "Vim navigation",
     "commands": [
       {
