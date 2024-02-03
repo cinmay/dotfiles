@@ -379,6 +379,16 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 -- See `:help telescope` and `:help telescope.setup()`
 require('telescope').setup {
   defaults = {
+    vimgrep_arguments = {
+      'rg',
+      '--color=never',
+      '--no-heading',
+      '--with-filename',
+      '--line-number',
+      '--column',
+      '--smart-case',
+      '-uu' -- **This is the setting not being respected**
+    },
     file_ignore_patterns = {
       "node_modules"
     },
@@ -388,6 +398,11 @@ require('telescope').setup {
         ['<C-d>'] = false,
       },
     },
+  },
+  pickers = {
+    find_files = {
+      hidden = true,
+    }
   },
 }
 

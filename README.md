@@ -11,18 +11,19 @@
 | Multi clipboard          |             |     |                  | Harpoon                        |
 | Emojis                   |             |     |                  | Copilot                        |
 | Markdown preview         |             |     |                  | Autosave                       |
-| Zoom in and out          |             |     |                  | Printable Keyboard shortcuts   |
-| Vim be good              |             |     |                  | Autoformatting                 |
-| Telescope show hidden    |             |     |                  | 80 line ruler                  |
+| Add dependencies reademe |             |     |                  | Printable Keyboard shortcuts   |
+| Set default terminal     |             |     |                  | Autoformatting                 |
+| Tmux styling             |             |     |                  | 80 line ruler                  |
 | TTS better voice         |             |     |                  | Center window                  |
 | Fix, Harpoon autosave    |             |     |                  | Pretier                        |
 | Add nice start screen    |             |     |                  | Typescript                     |
 | Add telescope help text  |             |     |                  | Linter                         |
 | Install trouble? or not  |             |     |                  | Kanban                         |
-| Tmux styling             |             |     |                  | Prettier                       |
-| Set default terminal     |             |     |                  | Prettier add html, css, yaml   |
-| Add dependencies reademe |             |     |                  |                                |
-|                          |             |     |                  |                                |
+|                          |             |     |                  | Prettier                       |
+|                          |             |     |                  | Prettier add html, css, yaml   |
+|                          |             |     |                  | Zoom in and out                |
+|                          |             |     |                  | VimBeGood                      |
+|                          |             |     |                  | Telescope show hidden          |
 
 ## Install Neovim
 
@@ -32,7 +33,7 @@ https://github.com/neovim/neovim/wiki/Installing-Neovim#install-from-source
 
 ```bash
 git tag
-git checkout v0.9.4
+git checkout v0.9.5
 ```
 
 ### Build and install
