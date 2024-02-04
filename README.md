@@ -24,6 +24,7 @@
 |                          |             |     |                  | Zoom in and out                |
 |                          |             |     |                  | VimBeGood                      |
 |                          |             |     |                  | Telescope show hidden          |
+|                          |             |     |                  | Workspace shotcuts             |
 
 ## Install Neovim
 
