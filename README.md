@@ -13,18 +13,19 @@
 | Markdown preview         |             |     |                  | Autosave                       |
 | Add dependencies reademe |             |     |                  | Printable Keyboard shortcuts   |
 | Set default terminal     |             |     |                  | Autoformatting                 |
-| Tmux styling             |             |     |                  | 80 line ruler                  |
+| Install trouble? or not  |             |     |                  | 80 line ruler                  |
 | TTS better voice         |             |     |                  | Center window                  |
 | Fix, Harpoon autosave    |             |     |                  | Pretier                        |
 | Add nice start screen    |             |     |                  | Typescript                     |
 | Add telescope help text  |             |     |                  | Linter                         |
-| Install trouble? or not  |             |     |                  | Kanban                         |
+|                          |             |     |                  | Kanban                         |
 |                          |             |     |                  | Prettier                       |
 |                          |             |     |                  | Prettier add html, css, yaml   |
 |                          |             |     |                  | Zoom in and out                |
 |                          |             |     |                  | VimBeGood                      |
 |                          |             |     |                  | Telescope show hidden          |
 |                          |             |     |                  | Workspace shotcuts             |
+|                          |             |     |                  | Tmux styling                   |
 
 ## Install Neovim
 
