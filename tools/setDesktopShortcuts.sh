@@ -40,4 +40,5 @@ gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-7 "['<Super><Sh
 gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-8 "['<Super><Shift>u']"
 gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-9 "['<Super><Shift>y']"
 
-
+## Center window
+gsettings set org.gnome.desktop.wm.keybindings move-to-center "['<Super>c']" 
