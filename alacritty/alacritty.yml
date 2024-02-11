@@ -1,0 +1,17 @@
+font:
+  normal:
+    family: OpenDyslexicM Nerd Font
+    style: Regular
+  bold:
+    family: OpenDyslexicM Nerd Font
+  italic:
+    family: OpenDyslexicM Nerd Font
+
+colors:
+  primary:
+    background: '0x000000' 
+
+window:
+  dimensions:
+    columns: 140  # Adjust to desired width
+    lines: 65 
