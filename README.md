@@ -12,12 +12,12 @@
 | Emojis                   |             |     |                  | Copilot                        |
 | Markdown preview         |             |     |                  | Autosave                       |
 | Add dependencies reademe |             |     |                  | Printable Keyboard shortcuts   |
-| Set default terminal     |             |     |                  | Autoformatting                 |
+| Add telescope help text  |             |     |                  | Autoformatting                 |
 | Install trouble? or not  |             |     |                  | 80 line ruler                  |
 | TTS better voice         |             |     |                  | Center window                  |
 | Fix, Harpoon autosave    |             |     |                  | Pretier                        |
-| Add nice start screen    |             |     |                  | Typescript                     |
-| Add telescope help text  |             |     |                  | Linter                         |
+|                          |             |     |                  | Typescript                     |
+|                          |             |     |                  | Linter                         |
 |                          |             |     |                  | Kanban                         |
 |                          |             |     |                  | Prettier                       |
 |                          |             |     |                  | Prettier add html, css, yaml   |
