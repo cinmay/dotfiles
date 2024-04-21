@@ -1,31 +1,32 @@
-# neovim-config
+neovim-config
 
 ## ToDo Kanban
 
-| Backlog                  | Preperation | Wip | Final inspection | Done                           |
-| ------------------------ | ----------- | --- | ---------------- | ------------------------------ |
-| Tesing                   |             |     |                  | Spellchecking                  |
-| Breakpoints              |             |     |                  | Relative line numbers          |
-| Nerd Font                |             |     |                  | Telerscope ignore node_modules |
-| LasyGit                  |             |     |                  | Tmux                           |
-| Multi clipboard          |             |     |                  | Harpoon                        |
-| Emojis                   |             |     |                  | Copilot                        |
-| Markdown preview         |             |     |                  | Autosave                       |
-| Add dependencies reademe |             |     |                  | Printable Keyboard shortcuts   |
-| Add telescope help text  |             |     |                  | Autoformatting                 |
-| Install trouble? or not  |             |     |                  | 80 line ruler                  |
-| TTS better voice         |             |     |                  | Center window                  |
-| Fix, Harpoon autosave    |             |     |                  | Pretier                        |
-|                          |             |     |                  | Typescript                     |
-|                          |             |     |                  | Linter                         |
-|                          |             |     |                  | Kanban                         |
-|                          |             |     |                  | Prettier                       |
-|                          |             |     |                  | Prettier add html, css, yaml   |
-|                          |             |     |                  | Zoom in and out                |
-|                          |             |     |                  | VimBeGood                      |
-|                          |             |     |                  | Telescope show hidden          |
-|                          |             |     |                  | Workspace shotcuts             |
-|                          |             |     |                  | Tmux styling                   |
+| Backlog                   | Preperation | Wip | Final inspection | Done                           |
+| ------------------------- | ----------- | --- | ---------------- | ------------------------------ |
+| Tesing                    |             |     |                  | Spellchecking                  |
+| Breakpoints               |             |     |                  | Relative line numbers          |
+| Nerd Font                 |             |     |                  | Telerscope ignore node_modules |
+| LasyGit                   |             |     |                  | Tmux                           |
+| Multi clipboard           |             |     |                  | Harpoon                        |
+| Emojis                    |             |     |                  | Copilot                        |
+| Markdown preview          |             |     |                  | Autosave                       |
+| Add dependencies reademe  |             |     |                  | Printable Keyboard shortcuts   |
+| Add telescope help text   |             |     |                  | Autoformatting                 |
+| Install trouble? or not   |             |     |                  | 80 line ruler                  |
+| TTS better voice          |             |     |                  | Center window                  |
+| Fix, Harpoon autosave     |             |     |                  | Pretier                        |
+| Fix, Alacrity scroll      |             |     |                  | Typescript                     |
+| Fix, hidden files         |             |     |                  | Linter                         |
+| Rename repo               |             |     |                  | Kanban                         |
+| Obsidian note integration |             |     |                  | Prettier                       |
+|                           |             |     |                  | Prettier add html, css, yaml   |
+|                           |             |     |                  | Zoom in and out                |
+|                           |             |     |                  | VimBeGood                      |
+|                           |             |     |                  | Telescope show hidden          |
+|                           |             |     |                  | Workspace shotcuts             |
+|                           |             |     |                  | Tmux styling                   |
+|                           |             |     |                  | Neotree file manager           |
 
 ## Install Neovim
 
