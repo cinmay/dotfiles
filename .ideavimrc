@@ -43,6 +43,9 @@ Plug 'tpope/vim-commentary'
 "" Map <leader>s f to find file
 map <leader>sf <Action>(GotoFile)
 
+"" Map <leader>s g to grep in project
+map <leader>sg <Action>(FindInPath)
+
 "" Map <leader>z to zen mode
 map <leader>z <Action>(ToggleZenMode)
 
