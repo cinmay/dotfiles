@@ -390,7 +390,9 @@ require('telescope').setup {
       '-uu' -- **This is the setting not being respected**
     },
     file_ignore_patterns = {
-      "node_modules"
+      "node_modules",
+      ".git",
+      ".parcel_cache"
     },
     mappings = {
       i = {
