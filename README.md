@@ -1,5 +1,3 @@
-neovim-config
-
 ## ToDo Kanban
 
 | Backlog                   | Preperation | Wip | Final inspection | Done                           |
@@ -17,9 +15,9 @@ neovim-config
 | TTS better voice          |             |     |                  | Center window                  |
 | Fix, Harpoon autosave     |             |     |                  | Pretier                        |
 | Fix, Alacrity scroll      |             |     |                  | Typescript                     |
-| Fix, hidden files         |             |     |                  | Linter                         |
+| Obsidian note integration |             |     |                  | Linter                         |
 | Rename repo               |             |     |                  | Kanban                         |
-| Obsidian note integration |             |     |                  | Prettier                       |
+|                           |             |     |                  | Prettier                       |
 |                           |             |     |                  | Prettier add html, css, yaml   |
 |                           |             |     |                  | Zoom in and out                |
 |                           |             |     |                  | VimBeGood                      |
@@ -27,6 +25,7 @@ neovim-config
 |                           |             |     |                  | Workspace shotcuts             |
 |                           |             |     |                  | Tmux styling                   |
 |                           |             |     |                  | Neotree file manager           |
+|                           |             |     |                  | Fix, hidden files              |
 
 ## Install Neovim
 

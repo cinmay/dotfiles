@@ -5,8 +5,10 @@
 
  " set <leader> to <space>
 let mapleader = " " 
-
-set relativenumber               " line numbers:
+set which-key
+let g:WhichKey_ShowVimActions = "true"
+set notimeout 			  " disable the timeout option
+set relativenumber                " line numbers:
 
 set hlsearch                      " highlight search occurrences
 set ignorecase                    " ignore case in search patterns
@@ -49,6 +51,14 @@ map <leader>sg <Action>(FindInPath)
 "" Map <leader>z to zen mode
 map <leader>z <Action>(ToggleZenMode)
 
+"" Code actions
+map <leader>cg <Action>(GotoNextError) 
+map <leader>ca <Action>(ShowIntentionActions)
+
+"" Testing actions
+map <leader>ctd <Action>(RiderUnitTestDebugContextAction)
+map <leader>ctr <Action>(RiderUnitTestRunContextAction)
+map <leader>cta <Action>(RiderUnitTestRunSolutionAction
 "" Map <leader>d to start debug
 "map <leader>d <Action>(Debug)
 
