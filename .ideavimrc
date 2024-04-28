@@ -56,9 +56,9 @@ map <leader>cg <Action>(GotoNextError)
 map <leader>ca <Action>(ShowIntentionActions)
 
 "" Testing actions
-map <leader>ctd <Action>(RiderUnitTestDebugContextAction)
-map <leader>ctr <Action>(RiderUnitTestRunContextAction)
-map <leader>cta <Action>(RiderUnitTestRunSolutionAction
+map td <Action>(RiderUnitTestDebugContextAction)
+map tr <Action>(RiderUnitTestRunContextAction)
+map ta <Action>(RiderUnitTestRunSolutionAction
 "" Map <leader>d to start debug
 "map <leader>d <Action>(Debug)
 
