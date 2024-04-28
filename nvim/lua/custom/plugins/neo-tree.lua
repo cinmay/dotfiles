@@ -34,6 +34,6 @@ return {
 			},
 		})
 
-		vim.api.nvim_set_keymap("n", "<leader>f", ":Neotree filesystem toggle<CR>", { silent = true })
+		vim.api.nvim_set_keymap("n", "<leader>tf", ":Neotree filesystem toggle<CR>", { silent = true })
 	end,
 }

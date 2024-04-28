@@ -48,8 +48,8 @@ map <leader>sf <Action>(GotoFile)
 "" Map <leader>s g to grep in project
 map <leader>sg <Action>(FindInPath)
 
-"" Map <leader>z to zen mode
-map <leader>z <Action>(ToggleZenMode)
+"" Toggle actions
+map <leader>tz <Action>(ToggleZenMode)
 
 "" Code actions
 map <leader>cg <Action>(GotoNextError) 
@@ -62,6 +62,9 @@ map <leader>rv <Action>(ExtractVariable)
 map <leader>rp <Action>(ExtractParameter)
 map <leader>rc <Action>(ChangeSignature)
 map <leader>ri <Action>(Inline)
+
+"" Formatting actions
+map <leader>f <Action>(ReformatCode)
 
 "" Testing actions
 map td <Action>(RiderUnitTestDebugContextAction)

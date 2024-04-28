@@ -62,3 +62,8 @@ run :Verbose map <the keybinding> e.g. :Verbose map <leader>g
 cd tools/hotkeyCheetSheet
 npx nodemon hotKeyCheetSheet.ts
 ```
+
+## Rider keybindings
+
+Link to plugins: https://github.com/JetBrains/ideavim/wiki/IdeaVim-Plugins
+Link to commands https://github.com/JetBrains/ideavim/blob/master/src/main/java/com/maddyhome/idea/vim/package-info.java
