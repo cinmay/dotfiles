@@ -55,6 +55,14 @@ map <leader>z <Action>(ToggleZenMode)
 map <leader>cg <Action>(GotoNextError) 
 map <leader>ca <Action>(ShowIntentionActions)
 
+"" Refactor actions
+map <leader>rr <Action>(RenameElement)
+map <leader>rf <Action>(ExtractMethod)
+map <leader>rv <Action>(ExtractVariable)
+map <leader>rp <Action>(ExtractParameter)
+map <leader>rc <Action>(ChangeSignature)
+map <leader>ri <Action>(Inline)
+
 "" Testing actions
 map td <Action>(RiderUnitTestDebugContextAction)
 map tr <Action>(RiderUnitTestRunContextAction)
