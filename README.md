@@ -16,7 +16,7 @@
 | Fix, Harpoon autosave     |             |     |                  | Pretier                        |
 | Fix, Alacrity scroll      |             |     |                  | Typescript                     |
 | Obsidian note integration |             |     |                  | Linter                         |
-| Rename repo               |             |     |                  | Kanban                         |
+|                           |             |     |                  | Kanban                         |
 |                           |             |     |                  | Prettier                       |
 |                           |             |     |                  | Prettier add html, css, yaml   |
 |                           |             |     |                  | Zoom in and out                |
@@ -26,6 +26,7 @@
 |                           |             |     |                  | Tmux styling                   |
 |                           |             |     |                  | Neotree file manager           |
 |                           |             |     |                  | Fix, hidden files              |
+|                           |             |     |                  | Rename Repo                    |
 
 ## Install Neovim
 
