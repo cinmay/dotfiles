@@ -37,6 +37,9 @@ Plug 'machakann/vim-highlightedyank'
 " Commentary plugin
 Plug 'tpope/vim-commentary'
 
+"" Map the :reg command to show the registers to double quote
+"" map " :reg<CR>
+
 
 "" -- Map IDE actions to IdeaVim -- https://jb.gg/abva4t
 "" Map \r to the Reformat Code action
@@ -54,7 +57,10 @@ map <leader>tz <Action>(ToggleZenMode)
 "" Code actions
 map <leader>cg <Action>(GotoNextError) 
 map <leader>ca <Action>(ShowIntentionActions)
-
+map <leader>cc <Action>(ShowContext
+map <leader>bs <Action>(BuildSolution)
+map <leader>br <Action>(RebuildSolution)
+map <leader>bc <Action>(CodeCleanup)
 "" Refactor actions
 map <leader>rr <Action>(RenameElement)
 map <leader>rf <Action>(ExtractMethod)
