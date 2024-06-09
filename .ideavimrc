@@ -56,6 +56,8 @@ map <leader>tz <Action>(ToggleZenMode)
 
 "" Code actions
 map <leader>cg <Action>(GotoNextError) 
+map ]d <Action>(GotoNextError) 
+map [d <Action>(GotoPreviousError)
 map <leader>ca <Action>(ShowIntentionActions)
 map <leader>cc <Action>(ShowContextActions)
 map <leader>cd <Action>(Debug)
