@@ -83,6 +83,10 @@
         "command": ":setlocal spell!"
       },
       {
+        "name": "Set spell checker language",
+        "command": ":setlocal spell spelllang=en_us"
+      },
+      {
         "name": "Next misspelled word",
         "command": "]s"
       },

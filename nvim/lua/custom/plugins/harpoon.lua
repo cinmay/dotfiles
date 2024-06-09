@@ -1,18 +1,71 @@
 return {
 	"ThePrimeagen/harpoon",
 	branch = "harpoon2",
-	config = function()
-		local harpoon = require("harpoon")
-		---@diagnostic disable-next-line: missing-parameter
-		harpoon:setup()
-		local function map(lhs, rhs, opts)
-			vim.keymap.set("n", lhs, rhs, opts or {})
-		end
-		map("<c-h>", function() harpoon:list():append() end)
-		map("<c-m>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end)
-		map("<c-n>", function() harpoon:list():select(1) end)
-		map("<c-e>", function() harpoon:list():select(2) end)
-		map("<c-i>", function() harpoon:list():select(3) end)
-		map("<c-o>", function() harpoon:list():select(4) end)
+	opts = {
+		menu = {
+			width = vim.api.nvim_win_get_width(0) - 4,
+		},
+		settings = {
+			save_on_toggle = false,
+		},
+	},
+	keys = function()
+		local keys = {
+			{
+				"<c-h>",
+				function()
+					require("harpoon"):list():add()
+				end,
+				desc = "Harpoon File",
+			},
+			{
+				"<c-m>",
+				function()
+					local harpoon = require("harpoon")
+					harpoon.ui:toggle_quick_menu(harpoon:list())
+				end,
+				desc = "Harpoon Quick Menu",
+			},
+			{
+				"<c-n>",
+				function()
+					require("harpoon"):list():select(1)
+				end,
+				desc = "Harpoon to File 1",
+			},
+			{
+				"<c-e>",
+				function()
+					require("harpoon"):list():select(2)
+				end,
+				desc = "Harpoon to File 2",
+			},
+			{
+				"<c-i>",
+				function()
+					require("harpoon"):list():select(3)
+				end,
+				desc = "Harpoon to File 3",
+			},
+			{
+				"<c-o>",
+				function()
+					require("harpoon"):list():select(4)
+				end,
+				desc = "Harpoon to File 4",
+			},
+		}
+
+		-- for i = 1, 5 do
+		-- 	table.insert(keys, {
+		-- 		"<leader>" .. i,
+		-- 		function()
+		-- 			require("harpoon"):list():select(i)
+		-- 		end,
+		-- 		desc = "Harpoon to File " .. i,
+		-- 	})
+		-- end
+
+		return keys
 	end,
 }

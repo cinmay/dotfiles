@@ -1,4 +1,4 @@
-## ToDo Kanban
+# ToDo Kanban
 
 | Backlog                   | Preperation | Wip | Final inspection | Done                           |
 | ------------------------- | ----------- | --- | ---------------- | ------------------------------ |
@@ -16,10 +16,10 @@
 | Fix, Harpoon autosave     |             |     |                  | Pretier                        |
 | Fix, Alacrity scroll      |             |     |                  | Typescript                     |
 | Obsidian note integration |             |     |                  | Linter                         |
-|                           |             |     |                  | Kanban                         |
-|                           |             |     |                  | Prettier                       |
-|                           |             |     |                  | Prettier add html, css, yaml   |
-|                           |             |     |                  | Zoom in and out                |
+| Find new wallpaper        |             |     |                  | Kanban                         |
+| Find Better Theme         |             |     |                  | Prettier                       |
+| Show types, uses etc      |             |     |                  | Prettier add html, css, yaml   |
+| Show Package size         |             |     |                  | Zoom in and out                |
 |                           |             |     |                  | VimBeGood                      |
 |                           |             |     |                  | Telescope show hidden          |
 |                           |             |     |                  | Workspace shotcuts             |
@@ -27,6 +27,12 @@
 |                           |             |     |                  | Neotree file manager           |
 |                           |             |     |                  | Fix, hidden files              |
 |                           |             |     |                  | Rename Repo                    |
+|                           |             |     |                  | Lsp next error                 |
+|                           |             |     |                  | Upgrade harpoon                |
+|                           |             |     |                  | Illuminate                     |
+|                           |             |     |                  | Lsp Docs                       |
+
+https://github.com/mg979/vim-visual-multi
 
 ## Install Neovim
 
