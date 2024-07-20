@@ -220,7 +220,13 @@ require('lazy').setup({
       },
     },
   },
-
+  {
+    -- Multiple cursor
+    'mg979/vim-visual-multi',
+    config = function()
+      vim.keymap.set("n", "<m-j>", "<Plug>(VM-Find-Under)")
+    end,
+  },
   {
     -- Add indentation guides even on blank lines
     'lukas-reineke/indent-blankline.nvim',
@@ -397,6 +403,7 @@ require('telescope').setup {
     },
     file_ignore_patterns = {
       "node_modules",
+      ".next",
       ".git",
       ".parcel_cache"
     },
@@ -567,7 +574,7 @@ local on_attach = function(_, bufnr)
     vim.keymap.set('n', keys, func, { buffer = bufnr, desc = desc })
   end
 
-  nmap('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
+  nmap('<leader>rr', vim.lsp.buf.rename, 'Rename')
   nmap('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
 
   nmap('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
