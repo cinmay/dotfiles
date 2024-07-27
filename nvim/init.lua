@@ -224,6 +224,7 @@ require('lazy').setup({
     -- Multiple cursor
     'mg979/vim-visual-multi',
     config = function()
+      vim.keymap.del("n", "<c-n>")
       vim.keymap.set("n", "<m-j>", "<Plug>(VM-Find-Under)")
     end,
   },
@@ -404,6 +405,7 @@ require('telescope').setup {
     file_ignore_patterns = {
       "node_modules",
       ".next",
+      "dist",
       ".git",
       ".parcel_cache"
     },
