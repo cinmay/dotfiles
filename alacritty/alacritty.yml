@@ -13,5 +13,19 @@ colors:
 
 window:
   dimensions:
-    columns: 140  # Adjust to desired width
-    lines: 65 
+    columns: 140
+    lines: 65
+  position:
+    x: 395
+    y: 51
+
+scrolling:
+  history: 10000
+  multiplier: 3
+
+mouse:
+  enabled: true
+  hide_when_typing: false
+
+key_bindings:
+  - { key: V, mods: Control, action: Paste }
