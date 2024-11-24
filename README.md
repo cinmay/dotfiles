@@ -34,6 +34,11 @@
 
 https://github.com/mg979/vim-visual-multi
 
+## Gnome Extensions
+
+https://extensions.gnome.org/extension/545/hide-top-bar/
+https://extensions.gnome.org/extension/5278/pano/
+
 ## Install Neovim
 
 https://github.com/neovim/neovim/wiki/Installing-Neovim#install-from-source
@@ -42,8 +47,13 @@ https://github.com/neovim/neovim/wiki/Installing-Neovim#install-from-source
 
 ```bash
 git tag
-git checkout v0.9.5
+git checkout v0.10.2
 ```
+
+### Prerequisites
+
+https://github.com/neovim/neovim/blob/master/BUILD.md#build-prerequisites
+Node ( required for some plugins )
 
 ### Build and install
 
