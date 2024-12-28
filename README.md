@@ -20,8 +20,8 @@
 | Find Better Theme         |             |     |                  | Prettier                       |
 | Show types, uses etc      |             |     |                  | Prettier add html, css, yaml   |
 | Show Package size         |             |     |                  | Zoom in and out                |
-|                           |             |     |                  | VimBeGood                      |
-|                           |             |     |                  | Telescope show hidden          |
+| Telescope resume          |             |     |                  | VimBeGood                      |
+| telekasten.nvim           |             |     |                  | Telescope show hidden          |
 |                           |             |     |                  | Workspace shotcuts             |
 |                           |             |     |                  | Tmux styling                   |
 |                           |             |     |                  | Neotree file manager           |
@@ -54,6 +54,14 @@ git checkout v0.10.2
 
 https://github.com/neovim/neovim/blob/master/BUILD.md#build-prerequisites
 Node ( required for some plugins )
+
+### Install ripgrep for live grep in telescope
+
+```bash
+ sudo apt install ripgrep
+```
+
+Install rust and cargo for htmx lsp
 
 ### Build and install
 

@@ -78,6 +78,8 @@ require('lazy').setup({
 
   -- Highlight other uses of the word under the cursor
   'RRethy/vim-illuminate',
+  -- mini icons
+  'echasnovski/mini.nvim',
 
   -- NOTE: This is where your plugins related to LSP can be installed.
   --  The configuration is done below. Search for lspconfig to find it below.
@@ -407,7 +409,8 @@ require('telescope').setup {
       ".next",
       "dist",
       ".git",
-      ".parcel_cache"
+      ".parcel_cache",
+      ".webp"
     },
     mappings = {
       i = {
@@ -496,7 +499,7 @@ vim.keymap.set('n', '<leader>sr', require('telescope.builtin').resume, { desc = 
 vim.defer_fn(function()
   require('nvim-treesitter.configs').setup {
     -- Add languages to be installed here that you want installed for treesitter
-    ensure_installed = { 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'tsx', 'javascript', 'typescript', 'vimdoc', 'vim', 'bash' },
+    ensure_installed = { 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'templ', 'tsx', 'javascript', 'typescript', 'vimdoc', 'vim', 'bash' },
 
     -- Autoinstall languages that are not installed. Defaults to false (but you can change for yourself!)
     auto_install = false,
@@ -607,14 +610,22 @@ end
 
 -- document existing key chains
 require('which-key').register {
-  ['<leader>c'] = { name = '[C]ode', _ = 'which_key_ignore' },
-  ['<leader>d'] = { name = '[D]ocument', _ = 'which_key_ignore' },
-  ['<leader>g'] = { name = '[G]it', _ = 'which_key_ignore' },
-  ['<leader>h'] = { name = 'Git [H]unk', _ = 'which_key_ignore' },
-  ['<leader>r'] = { name = '[R]ename', _ = 'which_key_ignore' },
-  ['<leader>s'] = { name = '[S]earch', _ = 'which_key_ignore' },
-  ['<leader>t'] = { name = '[T]oggle', _ = 'which_key_ignore' },
-  ['<leader>w'] = { name = '[W]orkspace', _ = 'which_key_ignore' },
+  {
+    { "", group = "[C]ode" },
+    { "", group = "[S]earch" },
+    { "", desc = "<leader>r_",  hidden = true },
+    { "", desc = "<leader>s_",  hidden = true },
+    { "", desc = "<leader>t_",  hidden = true },
+    { "", group = "[T]oggle" },
+    { "", group = "[W]orkspace" },
+    { "", group = "[R]ename" },
+    { "", group = "Git [H]unk" },
+    { "", desc = "<leader>c_",  hidden = true },
+    { "", desc = "<leader>h_",  hidden = true },
+    { "", group = "[G]it" },
+    { "", desc = "<leader>g_",  hidden = true },
+    { "", desc = "<leader>w_",  hidden = true },
+  }
 }
 -- register which-key VISUAL mode
 -- required for visual <leader>hs (hunk stage) to work
@@ -642,7 +653,7 @@ local servers = {
   -- pyright = {},
   -- rust_analyzer = {},
   marksman = {},
-  tsserver = {},
+  -- tsserver = {},
   html = { filetypes = { 'html', 'twig', 'hbs' } },
 
   lua_ls = {
