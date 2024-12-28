@@ -39,6 +39,35 @@ https://github.com/mg979/vim-visual-multi
 https://extensions.gnome.org/extension/545/hide-top-bar/
 https://extensions.gnome.org/extension/5278/pano/
 
+
+## Prerequests 
+```bash
+ sudo apt install ripgrep alacritty tmux gir1.2-gda-5.0 gir1.2-gsound-1.0 build-essential cmake gettext ninja-build unzip
+
+```
+
+* Install rust and cargo for htmx lsp
+* Install node
+
+## Link config files
+
+```bash
+    ln -s Documents/dotfiles/.zshrc .zshrc
+    ln -s Documents/dotfiles/.tmux.conf .tmux.conf
+    cd .config
+    ln -s ../Documents/dotfiles/alacritty alacritty
+    ln -s ../Documents/dotfiles/nvim nvim
+```
+## Fonts
+https://www.nerdfonts.com/font-downloads
+
+```bash
+    mkdir .local/share/fonts
+    cd Downloads
+    unzip JetBrainsMono.zip
+    mv *.ttf ~/.local/share/fonts -v
+    fc-cache -f -v
+```
 ## Install Neovim
 
 https://github.com/neovim/neovim/wiki/Installing-Neovim#install-from-source
@@ -47,7 +76,7 @@ https://github.com/neovim/neovim/wiki/Installing-Neovim#install-from-source
 
 ```bash
 git tag
-git checkout v0.10.2
+git checkout v0.10.3
 ```
 
 ### Prerequisites
@@ -55,13 +84,6 @@ git checkout v0.10.2
 https://github.com/neovim/neovim/blob/master/BUILD.md#build-prerequisites
 Node ( required for some plugins )
 
-### Install ripgrep for live grep in telescope
-
-```bash
- sudo apt install ripgrep
-```
-
-Install rust and cargo for htmx lsp
 
 ### Build and install
 
