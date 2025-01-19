@@ -101,7 +101,9 @@ source $ZSH/oh-my-zsh.sh
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 export VOLTA_HOME="$HOME/.volta"
 export PATH="$VOLTA_HOME/bin:$PATH"
+export PATH="$PATH:/usr/local/go/bin"
 export PATH="$HOME/neovim/bin:$PATH"
+export PATH="$HOME/go/bin:$PATH"
 export EDITOR='vim'
 export VISUAL='vim'
 

@@ -14,10 +14,10 @@ colors:
 window:
   dimensions:
     columns: 140
-    lines: 65
+    lines: 70
   position:
-    x: 395
-    y: 51
+    x: 650
+    y: 1
 
 scrolling:
   history: 10000

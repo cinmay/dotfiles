@@ -164,30 +164,30 @@ require('lazy').setup({
 
         -- Actions
         -- visual mode
-        map('v', '<leader>hs', function()
+        map('v', '<leader>ghs', function()
           gs.stage_hunk { vim.fn.line '.', vim.fn.line 'v' }
         end, { desc = 'stage git hunk' })
-        map('v', '<leader>hr', function()
+        map('v', '<leader>ghr', function()
           gs.reset_hunk { vim.fn.line '.', vim.fn.line 'v' }
         end, { desc = 'reset git hunk' })
         -- normal mode
-        map('n', '<leader>hs', gs.stage_hunk, { desc = 'git stage hunk' })
-        map('n', '<leader>hr', gs.reset_hunk, { desc = 'git reset hunk' })
-        map('n', '<leader>hS', gs.stage_buffer, { desc = 'git Stage buffer' })
-        map('n', '<leader>hu', gs.undo_stage_hunk, { desc = 'undo stage hunk' })
-        map('n', '<leader>hR', gs.reset_buffer, { desc = 'git Reset buffer' })
-        map('n', '<leader>hp', gs.preview_hunk, { desc = 'preview git hunk' })
-        map('n', '<leader>hb', function()
+        map('n', '<leader>ghs', gs.stage_hunk, { desc = 'git stage hunk' })
+        map('n', '<leader>ghr', gs.reset_hunk, { desc = 'git reset hunk' })
+        map('n', '<leader>ghS', gs.stage_buffer, { desc = 'git Stage buffer' })
+        map('n', '<leader>ghu', gs.undo_stage_hunk, { desc = 'undo stage hunk' })
+        map('n', '<leader>ghR', gs.reset_buffer, { desc = 'git Reset buffer' })
+        map('n', '<leader>ghp', gs.preview_hunk, { desc = 'preview git hunk' })
+        map('n', '<leader>ghb', function()
           gs.blame_line { full = false }
         end, { desc = 'git blame line' })
-        map('n', '<leader>hd', gs.diffthis, { desc = 'git diff against index' })
-        map('n', '<leader>hD', function()
+        map('n', '<leader>ghd', gs.diffthis, { desc = 'git diff against index' })
+        map('n', '<leader>ghD', function()
           gs.diffthis '~'
         end, { desc = 'git diff against last commit' })
 
         -- Toggles
-        map('n', '<leader>tb', gs.toggle_current_line_blame, { desc = 'toggle git blame line' })
-        map('n', '<leader>td', gs.toggle_deleted, { desc = 'toggle git show deleted' })
+        map('n', '<leader>gb', gs.toggle_current_line_blame, { desc = 'toggle git blame line' })
+        map('n', '<leader>gd', gs.toggle_deleted, { desc = 'toggle git show deleted' })
 
         -- Text object
         map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>', { desc = 'select git hunk' })
@@ -215,7 +215,7 @@ require('lazy').setup({
     -- See `:help lualine.txt`
     opts = {
       options = {
-        icons_enabled = false,
+        icons_enabled = true,
         theme = 'onedark',
         component_separators = '|',
         section_separators = '',
@@ -276,7 +276,7 @@ require('lazy').setup({
   --       These are some example plugins that I've included in the kickstart repository.
   --       Uncomment any of the lines below to enable them.
   require 'kickstart.plugins.autoformat',
-  -- require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.debug',
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    You can use this folder to prevent any conflicts with this init.lua if you're interested in keeping
@@ -349,8 +349,8 @@ end
 
 vim.keymap.set('n', '<c-r>', read_text, { desc = 'Read Text' })
 
--- Show 80 char limit
-vim.opt.colorcolumn = "80"
+-- Show 120 char limit
+vim.opt.colorcolumn = "120"
 
 -- Remap <c-d> and <c-u> to center cursor on screen.
 vim.keymap.set("n", "<C-d>", "<C-d>zz")
@@ -586,9 +586,9 @@ local on_attach = function(_, bufnr)
   nmap('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
   nmap('gR', vim.lsp.buf.references, '[G]oto [R]eferences')
   nmap('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
-  nmap('<leader>D', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
-  nmap('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
-  nmap('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
+  nmap('<leader>ld', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
+  nmap('<leader>ls', require('telescope.builtin').lsp_document_symbols, 'Document [S]ymbols')
+  nmap('<leader>lw', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace symbols')
 
   -- See `:help K` for why this keymap
   nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
@@ -608,32 +608,72 @@ local on_attach = function(_, bufnr)
   end, { desc = 'Format current buffer with LSP' })
 end
 
--- document existing key chains
-require('which-key').register {
+
+-- -- disconnect = "",
+-- vim.keymap.set("n", "<leader>dd", dap.disconnect, { desc = 'Disconnect' })
+--
+-- -- pause = "",
+-- vim.keymap.set("n", "<leader>dP", dap.pause, { desc = 'Pause' })
+--
+-- -- play = "",
+-- vim.keymap.set("n", "<leader>dp", dap.play, { desc = 'Play' })
+-- vim.keymap.set("n", "<leader>dc", dap.continue, { desc = 'Continue' })
+--
+-- -- run_last = "",
+-- vim.keymap.set("n", "<leader>dl", dap.run_last, { desc = 'Run last' })
+--
+-- -- step_back = "",
+--
+-- -- step_into = "",
+-- vim.keymap.set("n", "<leader>di", dap.step_into, { desc = 'Step into' })
+--
+-- -- step_out = "",
+--
+-- -- step_over = "",
+-- vim.keymap.set("n", "<leader>do", dap.step_over, { desc = 'Step over' })
+--
+-- -- terminate = ""
+-- vim.keymap.set("n", "<leader>dt", dap.terminate, { desc = 'Terminate' })
+--
+-- vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = 'Toggle breakpoint' })
+-- vim.keymap.set("n", "<leader>dg", dap.run_to_cursor, { desc = 'Run to cursor' })
+--
+-- -- Restart = recylcing icon
+-- vim.keymap.set("n", "<leader>dr", dap.restart, { desc = 'Restart' })
+--
+-- -- Eval var under cursor = magnifying glass
+-- vim.keymap.set("n", "<leader>du", function()
+--   require("dapui").eval(nil, { enter = true })
+
+require('which-key').add {
   {
-    { "", group = "[C]ode" },
-    { "", group = "[S]earch" },
-    { "", desc = "<leader>r_",  hidden = true },
-    { "", desc = "<leader>s_",  hidden = true },
-    { "", desc = "<leader>t_",  hidden = true },
-    { "", group = "[T]oggle" },
-    { "", group = "[W]orkspace" },
-    { "", group = "[R]ename" },
-    { "", group = "Git [H]unk" },
-    { "", desc = "<leader>c_",  hidden = true },
-    { "", desc = "<leader>h_",  hidden = true },
-    { "", group = "[G]it" },
-    { "", desc = "<leader>g_",  hidden = true },
-    { "", desc = "<leader>w_",  hidden = true },
+    { "<leader>c", group = "Code" },
+    { "<leader>s", group = "Search" },
+    { "<leader>d", group = "Debug" },
+    { "<leader>db", icon = { icon = "", color = "red" } },
+    { "<leader>dc", icon = { icon = "", color = "green" } },
+    { "<leader>do", icon = { icon = "", color = "green" } },
+    { "<leader>dl", icon = { icon = "", color = "green" } },
+    { "<leader>di", icon = { icon = "", color = "green" } },
+    { "<leader>dd", icon = { icon = "", color = "red" } },
+    { "<leader>dP", icon = { icon = "", color = "red" } },
+    { "<leader>dt", icon = { icon = "", color = "red" } },
+    { "<leader>do", icon = { icon = "", color = "green" } },
+    { "<leader>di", icon = { icon = "", color = "green" } },
+    { "<leader>dg", icon = { icon = "", color = "red" } },
+    { "<leader>dr", icon = { icon = "", color = "red" } },
+    { "<leader>du", icon = { icon = "", color = "green" } },
+    { "<leader>l", group = "LSP" },
+    { "<leader>t", group = "Toggle" },
+    { "<leader>w", group = "Workspace" },
+    { "<leader>r", group = "Rename" },
+    { "<leader>gh", group = "Hunk", mode = "n" },
+    { "<leader>gh", group = "Hunk", mode = "v" },
+    { "<leader>g", group = "Git", mode = "n" },
+    { "<leader>g", group = "Git", mode = "v" },
+    { "<leader>", name = 'VISUAL <leader>', mode = 'v' },
   }
 }
--- register which-key VISUAL mode
--- required for visual <leader>hs (hunk stage) to work
-require('which-key').register({
-  ['<leader>'] = { name = 'VISUAL <leader>' },
-  ['<leader>h'] = { 'Git [H]unk' },
-}, { mode = 'v' })
-
 -- mason-lspconfig requires that these setup functions are called in this order
 -- before setting up the servers.
 require('mason').setup()
