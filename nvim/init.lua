@@ -100,6 +100,14 @@ require('lazy').setup({
     },
   },
 
+  "tpope/vim-dadbod",
+  "kristijanhusak/vim-dadbod-completion",
+  {
+    "kristijanhusak/vim-dadbod-ui",
+    config = function()
+      vim.keymap.set("n", "<leader>td", ":DBUIToggle<CR>", { desc = "Toggle dbod" })
+    end,
+  },
   {
     -- Autocompletion
     'hrsh7th/nvim-cmp',

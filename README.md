@@ -14,7 +14,7 @@
 | Install trouble? or not   |             |     |                  | 80 line ruler                  |
 | TTS better voice          |             |     |                  | Center window                  |
 | Fix, Harpoon autosave     |             |     |                  | Pretier                        |
-| Fix, Alacrity scroll      |             |     |                  | Typescript                     |
+|                           |             |     |                  | Typescript                     |
 | Obsidian note integration |             |     |                  | Linter                         |
 | Find new wallpaper        |             |     |                  | Kanban                         |
 | Find Better Theme         |             |     |                  | Prettier                       |
@@ -22,7 +22,7 @@
 | Show Package size         |             |     |                  | Zoom in and out                |
 | Telescope resume          |             |     |                  | VimBeGood                      |
 | telekasten.nvim           |             |     |                  | Telescope show hidden          |
-|                           |             |     |                  | Workspace shotcuts             |
+| Buffer navigaton keys     |             |     |                  | Workspace shotcuts             |
 |                           |             |     |                  | Tmux styling                   |
 |                           |             |     |                  | Neotree file manager           |
 |                           |             |     |                  | Fix, hidden files              |
@@ -31,6 +31,7 @@
 |                           |             |     |                  | Upgrade harpoon                |
 |                           |             |     |                  | Illuminate                     |
 |                           |             |     |                  | Lsp Docs                       |
+|                           |             |     |                  | Fix, Alacrity scroll           |
 
 https://github.com/mg979/vim-visual-multi
 
@@ -39,15 +40,15 @@ https://github.com/mg979/vim-visual-multi
 https://extensions.gnome.org/extension/545/hide-top-bar/
 https://extensions.gnome.org/extension/5278/pano/
 
+## Prerequests
 
-## Prerequests 
 ```bash
  sudo apt install ripgrep alacritty tmux gir1.2-gda-5.0 gir1.2-gsound-1.0 build-essential cmake gettext ninja-build unzip
 
 ```
 
-* Install rust and cargo for htmx lsp
-* Install node
+- Install rust and cargo for htmx lsp
+- Install node
 
 ## Link config files
 
@@ -58,7 +59,9 @@ https://extensions.gnome.org/extension/5278/pano/
     ln -s ../Documents/dotfiles/alacritty alacritty
     ln -s ../Documents/dotfiles/nvim nvim
 ```
+
 ## Fonts
+
 https://www.nerdfonts.com/font-downloads
 
 ```bash
@@ -68,6 +71,7 @@ https://www.nerdfonts.com/font-downloads
     mv *.ttf ~/.local/share/fonts -v
     fc-cache -f -v
 ```
+
 ## Install Neovim
 
 https://github.com/neovim/neovim/wiki/Installing-Neovim#install-from-source
@@ -83,7 +87,6 @@ git checkout v0.10.3
 
 https://github.com/neovim/neovim/blob/master/BUILD.md#build-prerequisites
 Node ( required for some plugins )
-
 
 ### Build and install
 
