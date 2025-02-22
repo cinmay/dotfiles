@@ -14,15 +14,15 @@
 | Install trouble? or not   |             |     |                  | 80 line ruler                  |
 | TTS better voice          |             |     |                  | Center window                  |
 | Fix, Harpoon autosave     |             |     |                  | Pretier                        |
-|                           |             |     |                  | Typescript                     |
+| telekasten.nvim           |             |     |                  | Typescript                     |
 | Obsidian note integration |             |     |                  | Linter                         |
 | Find new wallpaper        |             |     |                  | Kanban                         |
 | Find Better Theme         |             |     |                  | Prettier                       |
 | Show types, uses etc      |             |     |                  | Prettier add html, css, yaml   |
 | Show Package size         |             |     |                  | Zoom in and out                |
 | Telescope resume          |             |     |                  | VimBeGood                      |
-| telekasten.nvim           |             |     |                  | Telescope show hidden          |
-| Buffer navigaton keys     |             |     |                  | Workspace shotcuts             |
+|                           |             |     |                  | Telescope show hidden          |
+|                           |             |     |                  | Workspace shotcuts             |
 |                           |             |     |                  | Tmux styling                   |
 |                           |             |     |                  | Neotree file manager           |
 |                           |             |     |                  | Fix, hidden files              |
@@ -32,7 +32,7 @@
 |                           |             |     |                  | Illuminate                     |
 |                           |             |     |                  | Lsp Docs                       |
 |                           |             |     |                  | Fix, Alacrity scroll           |
-
+|                           |             |     |                  |Buffer navigaton keys           | 
 https://github.com/mg979/vim-visual-multi
 
 ## Gnome Extensions

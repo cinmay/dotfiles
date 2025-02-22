@@ -387,6 +387,11 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- Toggles
 vim.keymap.set('n', '<leader>ta', ':ASToggle<CR>', { desc = 'toggle auto save' })
 
+-- Buffer navigation keymaps
+vim.keymap.set("n", "<Tab>", ":bnext<CR>", { desc = "Next Buffer" })
+vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>", { desc = "Previous Buffer" })
+vim.keymap.set("n", "<leader>bc", ":bdelete<CR>", { desc = "Close Buffer" })
+
 -- [[ Highlight on yank ]]
 -- See `:help vim.highlight.on_yank()`
 local highlight_group = vim.api.nvim_create_augroup('YankHighlight', { clear = true })
@@ -655,6 +660,7 @@ end
 
 require('which-key').add {
   {
+    { "<leader>b", group = "Buffer" },
     { "<leader>c", group = "Code" },
     { "<leader>s", group = "Search" },
     { "<leader>d", group = "Debug" },
