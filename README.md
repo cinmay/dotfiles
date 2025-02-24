@@ -32,7 +32,8 @@
 |                           |             |     |                  | Illuminate                     |
 |                           |             |     |                  | Lsp Docs                       |
 |                           |             |     |                  | Fix, Alacrity scroll           |
-|                           |             |     |                  |Buffer navigaton keys           | 
+|                           |             |     |                  | Buffer navigaton keys          |
+
 https://github.com/mg979/vim-visual-multi
 
 ## Gnome Extensions
