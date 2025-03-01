@@ -44,7 +44,7 @@ https://extensions.gnome.org/extension/5278/pano/
 ## Prerequests
 
 ```bash
- sudo apt install ripgrep alacritty tmux gir1.2-gda-5.0 gir1.2-gsound-1.0 build-essential cmake gettext ninja-build unzip
+ sudo apt install ripgrep alacritty tmux zsh gir1.2-gda-5.0 gir1.2-gsound-1.0 build-essential cmake gettext ninja-build unzip
 
 ```
 
@@ -81,13 +81,19 @@ https://github.com/neovim/neovim/wiki/Installing-Neovim#install-from-source
 
 ```bash
 git tag
-git checkout v0.10.3
+git checkout v0.10.4
 ```
 
 ### Prerequisites
 
 https://github.com/neovim/neovim/blob/master/BUILD.md#build-prerequisites
 Node ( required for some plugins )
+
+Install node
+```bash
+https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating
+```
+
 
 ### Build and install
 
