@@ -660,6 +660,7 @@ end
 
 require('which-key').add {
   {
+    { "<leader>a", group = "AI Avante" },
     { "<leader>b", group = "Buffer" },
     { "<leader>c", group = "Code" },
     { "<leader>s", group = "Search" },
