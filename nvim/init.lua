@@ -78,6 +78,7 @@ require('lazy').setup({
 
   -- Highlight other uses of the word under the cursor
   'RRethy/vim-illuminate',
+
   -- mini icons
   'echasnovski/mini.nvim',
 
@@ -355,7 +356,7 @@ local read_text = function()
   end
 end
 
-vim.keymap.set('n', '<c-r>', read_text, { desc = 'Read Text' })
+vim.keymap.set('n', '<A-r>', read_text, { desc = 'Read Text' })
 
 -- Show 120 char limit
 vim.opt.colorcolumn = "120"
@@ -388,8 +389,8 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 vim.keymap.set('n', '<leader>ta', ':ASToggle<CR>', { desc = 'toggle auto save' })
 
 -- Buffer navigation keymaps
-vim.keymap.set("n", "<Tab>", ":bnext<CR>", { desc = "Next Buffer" })
-vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>", { desc = "Previous Buffer" })
+vim.keymap.set("n", "<C-n>", ":bnext<CR>", { desc = "Next Buffer" })
+vim.keymap.set("n", "<C-p>", ":bprevious<CR>", { desc = "Previous Buffer" })
 vim.keymap.set("n", "<leader>bc", ":bdelete<CR>", { desc = "Close Buffer" })
 
 -- [[ Highlight on yank ]]

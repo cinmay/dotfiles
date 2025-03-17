@@ -7,7 +7,7 @@ return {
 				auto_trigger = true,
 				keymap = {
 					accept = "<C-e>",
-					accept_word = "<M-e>",
+					accept_word = "<A-e>",
 					next = "<C-u>",
 					prev = "<C-l>",
 				},
