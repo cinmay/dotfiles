@@ -4,12 +4,12 @@
 | ------------------------- | ----------- | --- | ---------------- | ------------------------------ |
 | Tesing                    |             |     |                  | Spellchecking                  |
 | Breakpoints               |             |     |                  | Relative line numbers          |
-| Nerd Font                 |             |     |                  | Telerscope ignore node_modules |
+| Telescope resume          |             |     |                  | Telerscope ignore node_modules |
 | LasyGit                   |             |     |                  | Tmux                           |
 | Multi clipboard           |             |     |                  | Harpoon                        |
 | Emojis                    |             |     |                  | Copilot                        |
-| Markdown preview          |             |     |                  | Autosave                       |
-| Add dependencies reademe  |             |     |                  | Printable Keyboard shortcuts   |
+| Show Package size         |             |     |                  | Autosave                       |
+| Show types, uses etc      |             |     |                  | Printable Keyboard shortcuts   |
 | Add telescope help text   |             |     |                  | Autoformatting                 |
 | Install trouble? or not   |             |     |                  | 80 line ruler                  |
 | TTS better voice          |             |     |                  | Center window                  |
@@ -17,10 +17,10 @@
 | telekasten.nvim           |             |     |                  | Typescript                     |
 | Obsidian note integration |             |     |                  | Linter                         |
 | Find new wallpaper        |             |     |                  | Kanban                         |
-| Find Better Theme         |             |     |                  | Prettier                       |
-| Show types, uses etc      |             |     |                  | Prettier add html, css, yaml   |
-| Show Package size         |             |     |                  | Zoom in and out                |
-| Telescope resume          |             |     |                  | VimBeGood                      |
+|                           |             |     |                  | Prettier                       |
+|                           |             |     |                  | Prettier add html, css, yaml   |
+|                           |             |     |                  | Zoom in and out                |
+|                           |             |     |                  | VimBeGood                      |
 |                           |             |     |                  | Telescope show hidden          |
 |                           |             |     |                  | Workspace shotcuts             |
 |                           |             |     |                  | Tmux styling                   |
@@ -33,6 +33,10 @@
 |                           |             |     |                  | Lsp Docs                       |
 |                           |             |     |                  | Fix, Alacrity scroll           |
 |                           |             |     |                  | Buffer navigaton keys          |
+|                           |             |     |                  | Find Better Theme              |
+|                           |             |     |                  | Nerd Font                      |
+|                           |             |     |                  | Markdown preview               |
+|                           |             |     |                  | Add dependencies reademe       |
 
 https://github.com/mg979/vim-visual-multi
 
@@ -56,9 +60,11 @@ https://extensions.gnome.org/extension/5278/pano/
 ```bash
     ln -s Documents/dotfiles/.zshrc .zshrc
     ln -s Documents/dotfiles/.tmux.conf .tmux.conf
+
     cd .config
     ln -s ../Documents/dotfiles/alacritty alacritty
     ln -s ../Documents/dotfiles/nvim nvim
+    ln -s ../Documents/dotfiles/ghostty ghostty
 ```
 
 ## Fonts
@@ -90,10 +96,10 @@ https://github.com/neovim/neovim/blob/master/BUILD.md#build-prerequisites
 Node ( required for some plugins )
 
 Install node
+
 ```bash
 https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating
 ```
-
 
 ### Build and install
 

@@ -203,20 +203,18 @@ require('lazy').setup({
       end,
     },
   },
-
   {
-    -- Theme inspired by Atom
-    'navarasu/onedark.nvim',
-    config = function()
-      vim.g.onedark_config = { style = 'deep' }
-      vim.cmd.colorscheme 'onedark'
-      vim.cmd [[
-        silent! colorscheme onedark:
-        hi Normal guibg=#000000
-        hi EndOfBuffer guibg=#000000
-    ]]
-    end,
+    "catppuccin/nvim",
+    lazy = true,
+    name = "catppuccin",
     priority = 1000,
+    opts = {
+      flavour = "mocha",
+      transparent_background = true,
+      integrations = {
+        alpha = true,
+      },
+    },
   },
   {
     -- Set lualine as statusline
@@ -225,7 +223,7 @@ require('lazy').setup({
     opts = {
       options = {
         icons_enabled = true,
-        theme = 'onedark',
+        theme = "catppuccin",
         component_separators = '|',
         section_separators = '',
       },
@@ -302,6 +300,7 @@ require('lazy').setup({
 -- See `:help vim.o`
 -- NOTE: You can change these options as you wish!
 
+vim.cmd.colorscheme "catppuccin"
 -- Set highlight on search
 vim.o.hlsearch = true
 

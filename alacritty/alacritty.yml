@@ -7,17 +7,14 @@ font:
   italic:
     family: JetBrainsMono Nerd Font
 
-colors:
-  primary:
-    background: '0x000000' 
-
 window:
+  opacity: 0.9
   dimensions:
     columns: 140
-    lines: 70
+    lines: 65
   position:
-    x: 650
-    y: 1
+    x: 395
+    y: 51
 
 scrolling:
   history: 10000
