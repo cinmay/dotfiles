@@ -51,5 +51,5 @@ keybind = performable:ctrl+v=paste_from_clipboard
 
 window-width = 140
 window-height = 65
-window-position-x = 0
-window-position-y = 200
+window-position-x = 256
+window-position-y = 256

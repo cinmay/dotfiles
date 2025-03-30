@@ -1,0 +1,18 @@
+# Enable shadows
+   shadow = true;
+
+   # Enable transparency
+   opacity-rule = [
+       "80:class_g = 'your_transparent_app_class'"
+   ];
+
+   # Fading
+   fading = true;
+   fade-delta = 4;
+   fade-in-step = 0.03;
+   fade-out-step = 0.03;
+
+   # Other settings
+   backend = "glx";
+   vsync = true;
+  
