@@ -280,6 +280,17 @@ globalkeys = gears.table.join(
     -- Standard program
     awful.key({ modkey, }, "Return", function() awful.spawn(terminal) end,
         { description = "open a terminal", group = "launcher" }),
+
+    -- Center the current window
+    awful.key({ modkey, }, "c", function()
+        if client.focus then
+            local c = client.focus
+            c:geometry({
+                x = (c.screen.geometry.width - c.width) / 2,
+                y = (c.screen.geometry.height - c.height) / 2
+            })
+        end
+    end, { description = "center the current window", group = "client" }),
     awful.key({ modkey, "Control" }, "r", awesome.restart,
         { description = "reload awesome", group = "awesome" }),
     awful.key({ modkey, "Shift" }, "q", awesome.quit,
