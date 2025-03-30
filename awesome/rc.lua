@@ -280,7 +280,7 @@ globalkeys = gears.table.join(
         { description = "go back", group = "client" }),
 
     -- Standard program
-    awful.key({ modkey, }, "Return", function() awful.spawn(terminal) end,
+    awful.key({ modkey, }, "t", function() awful.spawn(terminal) end,
         { description = "open a terminal", group = "launcher" }),
 
     -- Open Google Chrome
