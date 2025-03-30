@@ -22,6 +22,7 @@ require("awful.hotkeys_popup.keys")
 local debian = require("debian.menu")
 local has_fdo, freedesktop = pcall(require, "freedesktop")
 
+
 -- {{{ Error handling
 -- Check if awesome encountered an error during startup and fell back to
 -- another config (This code will only ever execute for the fallback config)
@@ -281,6 +282,10 @@ globalkeys = gears.table.join(
     -- Standard program
     awful.key({ modkey, }, "Return", function() awful.spawn(terminal) end,
         { description = "open a terminal", group = "launcher" }),
+
+    -- Open Google Chrome
+    awful.key({ modkey, }, "b", function() awful.spawn("google-chrome") end,
+        { description = "open Google Chrome", group = "launcher" }),
 
     -- Center the current window
     awful.key({ modkey, }, "c", function()
@@ -716,5 +721,4 @@ end)
 client.connect_signal("focus", function(c) c.border_color = beautiful.border_focus end)
 client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
 
-awful.spawn.with_shell("picom --config ~/.config/picom.conf")
 -- }}}
