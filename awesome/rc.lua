@@ -279,6 +279,10 @@ globalkeys = gears.table.join(
         end,
         { description = "go back", group = "client" }),
 
+    -- Add this to your keybindings
+    awful.key({ modkey }, "r", function() awful.util.spawn("rofi -show drun") end,
+        { description = "show rofi", group = "launcher" }),
+
     -- Standard program
     awful.key({ modkey, }, "t", function() awful.spawn(terminal) end,
         { description = "open a terminal", group = "launcher" }),
@@ -331,8 +335,8 @@ globalkeys = gears.table.join(
         { description = "restore minimized", group = "client" }),
 
     -- Prompt
-    awful.key({ modkey }, "r", function() awful.screen.focused().mypromptbox:run() end,
-        { description = "run prompt", group = "launcher" }),
+    -- awful.key({ modkey }, "r", function() awful.screen.focused().mypromptbox:run() end,
+    --     { description = "run prompt", group = "launcher" }),
 
     awful.key({ modkey }, "x",
         function()
