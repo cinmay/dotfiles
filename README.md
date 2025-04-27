@@ -55,6 +55,9 @@ https://extensions.gnome.org/extension/5278/pano/
 - Install rust and cargo for htmx lsp
 - Install node
 
+Install fastfetch
+https://github.com/fastfetch-cli/fastfetch
+
 ## Link config files
 
 ```bash
