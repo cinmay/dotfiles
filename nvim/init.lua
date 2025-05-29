@@ -387,6 +387,15 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- Toggles
 vim.keymap.set('n', '<leader>ta', ':ASToggle<CR>', { desc = 'toggle auto save' })
 
+vim.keymap.set('n', '<leader>th', function()
+  vim.o.hlsearch = not vim.o.hlsearch
+  print('Highlight search: ' .. (vim.o.hlsearch and 'on' or 'off'))
+end, { desc = 'toggle highlight search' })
+
+
+-- Toggle split window :vs
+vim.keymap.set('n', '<leader>ts', ':vsplit<CR>', { desc = 'Toggle vertical split' })
+
 -- Buffer navigation keymaps
 vim.keymap.set("n", "<C-n>", ":bnext<CR>", { desc = "Next Buffer" })
 vim.keymap.set("n", "<C-p>", ":bprevious<CR>", { desc = "Previous Buffer" })

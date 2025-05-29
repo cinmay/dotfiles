@@ -16,10 +16,11 @@ return {
       require("dap-go").setup()
 
       -- disconnect = "",
-      vim.keymap.set("n", "<leader>dd", dap.disconnect, { desc = 'Disconnect' })
+      vim.keymap.set("n", "<leader>dD", dap.disconnect, { desc = 'Disconnect' })
 
       -- pause = "",
       vim.keymap.set("n", "<leader>dP", dap.pause, { desc = 'Pause' })
+
 
       -- play = "",
       -- vim.keymap.set("n", "<leader>dp", dap.play, { desc = 'Play' })
@@ -31,19 +32,27 @@ return {
 
       -- step_into = "",
       vim.keymap.set("n", "<leader>di", dap.step_into, { desc = 'Step into' })
+      vim.keymap.set("n", ",i", dap.step_into, { desc = 'Step into' })
 
       -- step_out = "",
 
       -- step_over = "",
       vim.keymap.set("n", "<leader>do", dap.step_over, { desc = 'Step over' })
+      vim.keymap.set("n", ",o", dap.step_over, { desc = 'Step over' })
 
       -- terminate = ""
       vim.keymap.set("n", "<leader>dt", dap.terminate, { desc = 'Terminate' })
+      vim.keymap.set("n", ",t", dap.terminate, { desc = 'Terminate' })
 
       vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = 'Toggle breakpoint' })
+      vim.keymap.set("n", ",b", dap.toggle_breakpoint, { desc = 'Toggle breakpoint' })
+
       vim.keymap.set("n", "<leader>dg", dap.run_to_cursor, { desc = 'Run to cursor' })
       vim.keymap.set("n", "<leader>dc", dap.continue, { desc = 'Continue' })
+      vim.keymap.set("n", ",c", dap.continue, { desc = 'Continue' })
       vim.keymap.set("n", "<leader>dr", dap.restart, { desc = 'Restart' })
+      vim.keymap.set("n", ",r", dap.restart, { desc = 'Restart' })
+
 
       -- Tottle UI
       vim.keymap.set("n", "<leader>dx", function()
