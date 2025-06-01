@@ -17,7 +17,7 @@
 | telekasten.nvim           |             |     |                  | Typescript                     |
 | Obsidian note integration |             |     |                  | Linter                         |
 | Find new wallpaper        |             |     |                  | Kanban                         |
-|                           |             |     |                  | Prettier                       |
+| Install Neotest           |             |     |                  | Prettier                       |
 |                           |             |     |                  | Prettier add html, css, yaml   |
 |                           |             |     |                  | Zoom in and out                |
 |                           |             |     |                  | VimBeGood                      |
