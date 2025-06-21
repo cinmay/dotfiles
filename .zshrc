@@ -105,6 +105,8 @@ export PATH="$PATH:/usr/local/go/bin"
 export PATH="$HOME/neovim/bin:$PATH"
 export PATH="$HOME/zig:$PATH"
 export PATH="$HOME/go/bin:$PATH"
+export FLYCTL_INSTALL="/home/cinmay/.fly"
+export PATH="$FLYCTL_INSTALL/bin:$PATH"
 export EDITOR='nvim'
 export VISUAL='nvim'
 
