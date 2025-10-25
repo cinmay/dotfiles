@@ -45,6 +45,15 @@ https://github.com/mg979/vim-visual-multi
 https://extensions.gnome.org/extension/545/hide-top-bar/
 https://extensions.gnome.org/extension/5278/pano/
 
+## Bootstrap dotfiles
+
+### Omarchy
+```bash
+
+```bash
+stow -t "$HOME" omarchy
+```
+
 ## Prerequests
 
 ```bash
