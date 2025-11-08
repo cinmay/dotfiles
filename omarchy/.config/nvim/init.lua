@@ -945,7 +945,6 @@ require("lazy").setup({
 	-- 				comments = { italic = false }, -- Disable italics in comments
 	-- 			},
 	-- 		})
-	--
 	-- 		-- Load the colorscheme here.
 	-- 		-- Like many other themes, this one has different styles, and you could load
 	-- 		-- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
@@ -953,6 +952,11 @@ require("lazy").setup({
 	-- 	end,
 	-- },
 	--
+	{
+		"catppuccin/nvim",
+		name = "catppuccin",
+		priority = 1000,
+	},
 	-- Highlight todo, notes, etc in comments
 	{
 		"folke/todo-comments.nvim",
@@ -1001,7 +1005,7 @@ require("lazy").setup({
 	{ -- Highlight, edit, and navigate code
 		"nvim-treesitter/nvim-treesitter",
 		build = ":TSUpdate",
-		main = "nvim-treesitter.config", -- Sets main module to use for opts
+		main = "nvim-treesitter.configs", -- Sets main module to use for opts
 		-- [[ Configure Treesitter ]] See `:help nvim-treesitter`
 		opts = {
 			ensure_installed = {
@@ -1017,7 +1021,7 @@ require("lazy").setup({
 				"markdown_inline",
 				"templ",
 				"tsx",
-				"typescript-language-server",
+				-- "typescript-language-server",
 				"query",
 				"vim",
 				"vimdoc",
