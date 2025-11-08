@@ -11,4 +11,8 @@ source ~/.local/share/omarchy/default/bash/rc
 # alias p='python'
 alias vi=nvim
 alias vim=nvim
+
+export FLYCTL_INSTALL="/home/cinmay/.fly"
+export PATH="$FLYCTL_INSTALL/bin:$PATH"
+
 fastfetch
