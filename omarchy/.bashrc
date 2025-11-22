@@ -11,4 +11,7 @@ source ~/.local/share/omarchy/default/bash/rc
 # alias p='python'
 alias vi=nvim
 alias vim=nvim
+
+export PATH="$HOME/go/bin:$PATH"
+
 fastfetch
