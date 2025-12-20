@@ -223,10 +223,10 @@ vim.keymap.set("n", "<C-k>", "<C-w><C-k>", { desc = "Move focus to the upper win
 -- Toggles
 vim.keymap.set("n", "<leader>ta", ":ASToggle<CR>", { desc = "toggle auto save" })
 
-vim.keymap.set("n", "<leader>th", function()
-	vim.o.hlsearch = not vim.o.hlsearch
-	print("Highlight search: " .. (vim.o.hlsearch and "on" or "off"))
-end, { desc = "toggle highlight search" })
+-- vim.keymap.set("n", "<leader>th", function()
+-- 	vim.o.hlsearch = not vim.o.hlsearch
+-- 	print("Highlight search: " .. (vim.o.hlsearch and "on" or "off"))
+-- end, { desc = "toggle highlight search" })
 
 -- Toggle split window :vs
 vim.keymap.set("n", "<leader>ts", ":vsplit<CR>", { desc = "Toggle vertical split" })
@@ -824,5 +824,6 @@ require("lazy").setup({
 	},
 })
 
+vim.cmd.colorscheme("catppuccin-mocha")
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
