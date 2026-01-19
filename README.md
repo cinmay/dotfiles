@@ -1,5 +1,12 @@
 # ToDo Kanban
 
+## Why
+Why: The purpose of my setup is to reinforce my pursuit of personal excellence in professional software development.
+
+## Philosophy & Guiding Principles
+This setup is a deliberate professional workspace for focus and personal excellence. Everything is intentional: every tool exists for a reason, every screen element earns its place, and anything that distracts or dilutes the work is removed. The environment is built for single-tasking, with one monitor, keyboard-first navigation, and one workspace per task so attention stays on the work. I prefer hard-mode learning because mastery matters more than convenience, and a bespoke Neovim workflow forces me to understand my tools deeply. The system is designed so everything has a hotkey and a clear purpose, reinforcing discipline, flow, and craftsmanship.
+
+
 | Backlog                   | Preperation | Wip | Final inspection | Done                           |
 | ------------------------- | ----------- | --- | ---------------- | ------------------------------ |
 | Tesing                    |             |     |                  | Spellchecking                  |
