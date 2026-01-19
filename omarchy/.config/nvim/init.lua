@@ -416,6 +416,18 @@ require("lazy").setup({
 				command_palette = true,
 				long_message_to_split = true,
 			},
+			views = {
+				cmdline_popup = {
+					position = {
+						row = "40%",
+						col = "50%",
+					},
+					size = {
+						width = 60,
+						height = "auto",
+					},
+				},
+			},
 		},
 	},
 
