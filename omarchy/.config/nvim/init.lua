@@ -393,6 +393,32 @@ require("lazy").setup({
 		},
 	},
 
+	{ -- Cmdline + messages + LSP progress UI
+		"folke/noice.nvim",
+		event = "VeryLazy",
+		dependencies = {
+			"MunifTanjim/nui.nvim",
+			{
+				"rcarriga/nvim-notify",
+				opts = { timeout = 3000 },
+				config = function(_, opts)
+					require("notify").setup(opts)
+					vim.notify = require("notify")
+				end,
+			},
+			{ "stevearc/dressing.nvim", opts = {} },
+		},
+		opts = {
+			lsp = {
+				progress = { enabled = true },
+			},
+			presets = {
+				command_palette = true,
+				long_message_to_split = true,
+			},
+		},
+	},
+
 	-- NOTE: Plugins can specify dependencies.
 	--
 	-- The dependencies are proper plugin specifications as well - anything
