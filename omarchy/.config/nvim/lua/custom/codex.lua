@@ -60,6 +60,11 @@ local function append_block(buf, stdout, stderr)
 		table.insert(lines, "```")
 	end
 
+	table.insert(lines, "")
+	table.insert(lines, "--- Next Prompt ---")
+	table.insert(lines, "Time: " .. timestamp)
+	table.insert(lines, "")
+
 	vim.api.nvim_buf_set_lines(buf, -1, -1, false, lines)
 end
 
