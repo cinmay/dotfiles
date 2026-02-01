@@ -8,8 +8,9 @@ M.config = {
 	session_header = "--- Codex Session ---",
 	next_prompt_marker = "--- Next Prompt ---",
 	time_prefix = "Time: ",
-	debug = true,
+	debug = false,
 	debug_max_lines = 200,
+	close_delay_ms = 1000,
 }
 
 local function is_thread_buffer(buf, cwd)
@@ -363,9 +364,9 @@ function M.run()
 		local elapsed = math.floor((vim.loop.hrtime() - start_time) / 1e9)
 		local minutes = math.floor(elapsed / 60)
 		local seconds = elapsed % 60
-	vim.schedule(function()
-		update_window_title(live_win, string.format("%02d:%02d", minutes, seconds), model_label)
-	end)
+		vim.schedule(function()
+			update_window_title(live_win, string.format("%02d:%02d", minutes, seconds), model_label)
+		end)
 	end)
 
 	local function stop_timer()
@@ -382,6 +383,20 @@ function M.run()
 		if vim.api.nvim_win_is_valid(prev_win) then
 			vim.api.nvim_set_current_win(prev_win)
 		end
+	end
+
+	local function schedule_close_if_success(code)
+		if code ~= 0 then
+			return
+		end
+		local delay = M.config.close_delay_ms or 0
+		if delay <= 0 then
+			close_live_window()
+			return
+		end
+		vim.defer_fn(function()
+			close_live_window()
+		end, delay)
 	end
 
 	local function handle_result(result, extra_stderr)
@@ -412,10 +427,25 @@ function M.run()
 		vim.notify("Codex finished", vim.log.levels.INFO)
 	end
 
+	local function append_progress(line)
+		local lines = line
+		if type(lines) == "string" then
+			lines = { lines }
+		end
+		vim.schedule(function()
+			append_live(live_buf, lines)
+			if vim.api.nvim_win_is_valid(live_win) then
+				local line_count = vim.api.nvim_buf_line_count(live_buf)
+				vim.api.nvim_win_set_cursor(live_win, { line_count, 0 })
+			end
+		end)
+	end
+
 	local function stream_handler(line)
 		if not line or line == "" then
 			return
 		end
+		line = line:gsub("\r$", "")
 		table.insert(raw_lines, line)
 		local event = parse_stream_event(line)
 		if event and event.type == "session_meta" and event.payload then
@@ -453,7 +483,7 @@ function M.run()
 					for _, text_line in ipairs(text_lines) do
 						table.insert(assistant_lines, text_line)
 					end
-					append_live(live_buf, text_lines)
+					append_progress(text_lines)
 				end
 			end
 		elseif event
@@ -466,12 +496,27 @@ function M.run()
 			for _, text_line in ipairs(text_lines) do
 				table.insert(assistant_lines, text_line)
 			end
-			append_live(live_buf, text_lines)
+			append_progress(text_lines)
+		elseif event and event.type == "thread.started" then
+			append_progress("Session started")
+		elseif event and event.type == "turn.started" then
+			append_progress("Turn started")
+		elseif event and event.type == "item.completed" and event.item and event.item.type == "reasoning" then
+			local text = event.item.text or ""
+			local title = text:match("%*%*(.-)%*%*") or "Planning"
+			append_progress("Planning: " .. title)
+		elseif event and event.type == "item.completed" and event.item and event.item.type == "file_change" then
+			local changes = event.item.changes or {}
+			for _, change in ipairs(changes) do
+				local path = change.path or "file"
+				local name = vim.fn.fnamemodify(path, ":t")
+				append_progress("Updated: " .. name)
+			end
 		elseif not event and M.config.debug and debug_lines < M.config.debug_max_lines then
-			append_live(live_buf, "[debug] " .. line)
+			append_progress("[debug] " .. line)
 			debug_lines = debug_lines + 1
 		elseif event and M.config.debug and debug_lines < M.config.debug_max_lines then
-			append_live(live_buf, "[debug] " .. line)
+			append_progress("[debug] " .. line)
 			debug_lines = debug_lines + 1
 		end
 	end
@@ -486,7 +531,7 @@ function M.run()
 			on_exit = function(resume_result)
 				if resume_result.code == 0 then
 					handle_result(resume_result, nil)
-					close_live_window()
+					schedule_close_if_success(resume_result.code)
 				else
 					local resume_err = resume_result.stderr or ""
 					local resume_note = "Resume failed (exit code " .. tostring(resume_result.code) .. ")"
@@ -499,9 +544,7 @@ function M.run()
 						on_stderr = stderr_handler,
 						on_exit = function(full_result)
 							handle_result(full_result, resume_note)
-							if full_result.code == 0 then
-								close_live_window()
-							end
+							schedule_close_if_success(full_result.code)
 						end,
 					})
 				end
@@ -518,9 +561,7 @@ function M.run()
 			on_stderr = stderr_handler,
 			on_exit = function(result)
 				handle_result(result, nil)
-				if result.code == 0 then
-					close_live_window()
-				end
+				schedule_close_if_success(result.code)
 			end,
 		})
 		if not job_id then
