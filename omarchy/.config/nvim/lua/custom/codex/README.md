@@ -72,4 +72,3 @@ Write your next prompt below the `--- Next Prompt ---` marker.
 
 ## Files
 - `nvim/lua/custom/codex/init.lua` - Neovim command and thread logic.
-- `nvim/lua/custom/codex/codex-thread.sh` - Helper wrapper around the Codex CLI.

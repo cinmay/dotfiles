@@ -1,21 +1,15 @@
 local M = {}
 
-local function default_helper()
-	local home = vim.env.HOME
-	if home and home ~= "" then
-		return home .. "/.local/bin/codex-thread.sh"
-	end
-	return "codex-thread.sh"
-end
-
 M.config = {
-	helper = default_helper(),
+	command = "codex",
 	flags = { "--sandbox", "workspace-write" },
 	json = true,
 	delimiter = "--- Codex Run ---",
 	session_header = "--- Codex Session ---",
 	next_prompt_marker = "--- Next Prompt ---",
 	time_prefix = "Time: ",
+	debug = true,
+	debug_max_lines = 200,
 }
 
 local function is_thread_buffer(buf, cwd)
@@ -324,9 +318,9 @@ function M.run()
 		return
 	end
 
-	local helper = M.config.helper
-	if vim.fn.filereadable(helper) ~= 1 then
-		vim.notify("Codex helper not found: " .. helper, vim.log.levels.ERROR)
+	local command = M.config.command
+	if not command or command == "" then
+		vim.notify("Codex command is not configured", vim.log.levels.ERROR)
 		return
 	end
 
@@ -339,7 +333,7 @@ function M.run()
 	end
 
 	local function build_cmd(use_resume)
-		local cmd = { helper, "exec" }
+		local cmd = { command, "exec" }
 		if M.config.json then
 			table.insert(cmd, "--json")
 		end
@@ -362,6 +356,7 @@ function M.run()
 	local model_label = nil
 	local assistant_lines = {}
 	local raw_lines = {}
+	local debug_lines = 0
 
 	local timer = vim.loop.new_timer()
 	timer:start(0, 1000, function()
@@ -472,8 +467,12 @@ function M.run()
 				table.insert(assistant_lines, text_line)
 			end
 			append_live(live_buf, text_lines)
-		elseif not event then
-			append_live(live_buf, line)
+		elseif not event and M.config.debug and debug_lines < M.config.debug_max_lines then
+			append_live(live_buf, "[debug] " .. line)
+			debug_lines = debug_lines + 1
+		elseif event and M.config.debug and debug_lines < M.config.debug_max_lines then
+			append_live(live_buf, "[debug] " .. line)
+			debug_lines = debug_lines + 1
 		end
 	end
 
