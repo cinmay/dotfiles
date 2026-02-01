@@ -228,34 +228,66 @@ end
 local function run_codex_job(cmd, input, handlers)
 	local stdout_accum = {}
 	local stderr_accum = {}
+	local stdout_buf = ""
+	local stderr_buf = ""
+
+	local function handle_line(handler, line)
+		if handler then
+			handler(line)
+		end
+	end
+
+	local function flush_buffer(buf, accum, handler)
+		if buf ~= "" then
+			table.insert(accum, buf)
+			handle_line(handler, buf)
+		end
+		return ""
+	end
 
 	local job_id = vim.fn.jobstart(cmd, {
 		stdin = "pipe",
 		on_stdout = function(_, data)
-			if data then
-				for _, line in ipairs(data) do
-					if line ~= "" then
-						table.insert(stdout_accum, line)
+			if not data then
+				return
+			end
+			for i, chunk in ipairs(data) do
+				if i == #data then
+					if chunk == "" then
+						stdout_buf = flush_buffer(stdout_buf, stdout_accum, handlers.on_stdout)
+					else
+						stdout_buf = stdout_buf .. chunk
 					end
-				end
-				if handlers.on_stdout then
-					handlers.on_stdout(data)
+				else
+					local line = stdout_buf .. chunk
+					stdout_buf = ""
+					table.insert(stdout_accum, line)
+					handle_line(handlers.on_stdout, line)
 				end
 			end
 		end,
 		on_stderr = function(_, data)
-			if data then
-				for _, line in ipairs(data) do
-					if line ~= "" then
-						table.insert(stderr_accum, line)
+			if not data then
+				return
+			end
+			for i, chunk in ipairs(data) do
+				if i == #data then
+					if chunk == "" then
+						stderr_buf = flush_buffer(stderr_buf, stderr_accum, handlers.on_stderr)
+					else
+						stderr_buf = stderr_buf .. chunk
 					end
-				end
-				if handlers.on_stderr then
-					handlers.on_stderr(data)
+				else
+					local line = stderr_buf .. chunk
+					stderr_buf = ""
+					table.insert(stderr_accum, line)
+					handle_line(handlers.on_stderr, line)
 				end
 			end
 		end,
 		on_exit = function(_, code)
+			stdout_buf = flush_buffer(stdout_buf, stdout_accum, handlers.on_stdout)
+			stderr_buf = flush_buffer(stderr_buf, stderr_accum, handlers.on_stderr)
 			if handlers.on_exit then
 				handlers.on_exit({
 					code = code,
@@ -329,6 +361,7 @@ function M.run()
 	local start_time = vim.loop.hrtime()
 	local model_label = nil
 	local assistant_lines = {}
+	local raw_lines = {}
 
 	local timer = vim.loop.new_timer()
 	timer:start(0, 1000, function()
@@ -373,6 +406,9 @@ function M.run()
 		end
 
 		local message = table.concat(assistant_lines, "\n")
+		if message == "" then
+			message = table.concat(raw_lines, "\n")
+		end
 		append_block(buf, message or "", stderr or "")
 		if new_session_id and new_session_id ~= "" then
 			ensure_session_header(buf, M.config.session_header, new_session_id)
@@ -381,50 +417,63 @@ function M.run()
 		vim.notify("Codex finished", vim.log.levels.INFO)
 	end
 
-	local function stream_handler(data)
-		for _, line in ipairs(data or {}) do
-			if line ~= "" then
-				local event = parse_stream_event(line)
-				if event and event.type == "session_meta" and event.payload then
-					local provider = event.payload.model_provider
-					local model = event.payload.model or event.payload.model_name or event.payload.model_id
-					if event.payload.model and type(event.payload.model) == "string" then
-						model = event.payload.model
-					end
-					if provider and model then
-						model_label = provider .. ":" .. model
-					elseif provider then
-						model_label = provider
-					end
-				elseif event and event.type == "turn_context" and event.payload and event.payload.model then
-					local model = event.payload.model
-					if model and model:match("%S") then
-						local provider = event.payload.model_provider
-						if provider and provider:match("%S") then
-							model_label = provider .. ":" .. model
-						else
-							model_label = model
-						end
-					end
-				end
-				if event
-					and event.type == "response_item"
-					and event.payload
-					and event.payload.type == "message"
-					and event.payload.role == "assistant"
-				then
-					local content = event.payload.content or {}
-					for _, item in ipairs(content) do
-						if item.type == "output_text" or item.type == "input_text" then
-							local text_lines = vim.split(item.text or "", "\n", { plain = true })
-							for _, text_line in ipairs(text_lines) do
-								table.insert(assistant_lines, text_line)
-							end
-							append_live(live_buf, text_lines)
-						end
-					end
+	local function stream_handler(line)
+		if not line or line == "" then
+			return
+		end
+		table.insert(raw_lines, line)
+		local event = parse_stream_event(line)
+		if event and event.type == "session_meta" and event.payload then
+			local provider = event.payload.model_provider
+			local model = event.payload.model or event.payload.model_name or event.payload.model_id
+			if event.payload.model and type(event.payload.model) == "string" then
+				model = event.payload.model
+			end
+			if provider and model then
+				model_label = provider .. ":" .. model
+			elseif provider then
+				model_label = provider
+			end
+		elseif event and event.type == "turn_context" and event.payload and event.payload.model then
+			local model = event.payload.model
+			if model and model:match("%S") then
+				local provider = event.payload.model_provider
+				if provider and provider:match("%S") then
+					model_label = provider .. ":" .. model
+				else
+					model_label = model
 				end
 			end
+		end
+		if event
+			and event.type == "response_item"
+			and event.payload
+			and event.payload.type == "message"
+			and event.payload.role == "assistant"
+		then
+			local content = event.payload.content or {}
+			for _, item in ipairs(content) do
+				if item.type == "output_text" or item.type == "input_text" then
+					local text_lines = vim.split(item.text or "", "\n", { plain = true })
+					for _, text_line in ipairs(text_lines) do
+						table.insert(assistant_lines, text_line)
+					end
+					append_live(live_buf, text_lines)
+				end
+			end
+		elseif event
+			and event.type == "item.completed"
+			and event.item
+			and event.item.type == "agent_message"
+			and event.item.text
+		then
+			local text_lines = vim.split(event.item.text or "", "\n", { plain = true })
+			for _, text_line in ipairs(text_lines) do
+				table.insert(assistant_lines, text_line)
+			end
+			append_live(live_buf, text_lines)
+		elseif not event then
+			append_live(live_buf, line)
 		end
 	end
 
