@@ -16,6 +16,7 @@ M.config = {
 	delimiter = "--- Codex Run ---",
 	session_header = "--- Codex Session ---",
 	next_prompt_marker = "--- Next Prompt ---",
+	time_prefix = "Time: ",
 }
 
 local function is_thread_buffer(buf, cwd)
@@ -137,8 +138,8 @@ local function append_block(buf, stdout, stderr)
 	local lines = {}
 
 	table.insert(lines, "")
+	table.insert(lines, M.config.time_prefix .. timestamp)
 	table.insert(lines, M.config.delimiter)
-	table.insert(lines, "Time: " .. timestamp)
 	table.insert(lines, "")
 	table.insert(lines, "```Markdown")
 	if stdout and stdout ~= "" then
@@ -160,8 +161,8 @@ local function append_block(buf, stdout, stderr)
 	end
 
 	table.insert(lines, "")
-	table.insert(lines, M.config.next_prompt_marker)
 	table.insert(lines, "Time: " .. timestamp)
+	table.insert(lines, M.config.next_prompt_marker)
 	table.insert(lines, "")
 
 	vim.api.nvim_buf_set_lines(buf, -1, -1, false, lines)
@@ -185,7 +186,10 @@ function M.run()
 	local cwd = vim.fn.getcwd()
 
 	if not is_thread_buffer(buf, cwd) then
-		vim.notify("Codex run is only allowed in .ai/threads files under the current working directory", vim.log.levels.WARN)
+		vim.notify(
+			"Codex run is only allowed in .ai/threads files under the current working directory",
+			vim.log.levels.WARN
+		)
 		return
 	end
 

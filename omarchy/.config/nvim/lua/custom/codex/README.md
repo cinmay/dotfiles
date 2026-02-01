@@ -35,8 +35,8 @@ The header is updated automatically after a successful run.
 Each run appends:
 
 ```
---- Codex Run ---
 Time: 2026-02-01 10:44:25
+--- Codex Run ---
 
 ```Markdown
 <assistant response>
