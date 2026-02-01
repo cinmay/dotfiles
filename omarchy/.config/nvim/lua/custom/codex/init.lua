@@ -12,7 +12,6 @@ M.config = {
 	helper = default_helper(),
 	flags = { "--sandbox", "workspace-write" },
 	json = true,
-	output_last_message = true,
 	delimiter = "--- Codex Run ---",
 	session_header = "--- Codex Session ---",
 	next_prompt_marker = "--- Next Prompt ---",
@@ -109,13 +108,21 @@ local function full_prompt(lines, header)
 	return table.concat(stripped, "\n") .. "\n"
 end
 
+local function parse_stream_event(line)
+	local ok, event = pcall(vim.json.decode, line)
+	if not ok or type(event) ~= "table" then
+		return nil
+	end
+	return event
+end
+
 local function parse_session_id(stdout)
 	local session_id = nil
 	local decoded_any = false
 
 	for _, line in ipairs(vim.split(stdout or "", "\n", { plain = true, trimempty = true })) do
-		local ok, event = pcall(vim.json.decode, line)
-		if ok and type(event) == "table" then
+		local event = parse_stream_event(line)
+		if event then
 			decoded_any = true
 			if event.type == "session_meta" and event.payload and event.payload.id then
 				session_id = event.payload.id
@@ -168,17 +175,109 @@ local function append_block(buf, stdout, stderr)
 	vim.api.nvim_buf_set_lines(buf, -1, -1, false, lines)
 end
 
-local function run_codex(cmd, input, callback)
-	vim.system(cmd, { text = true, stdin = input }, function(result)
-		vim.schedule(function()
-			callback(result)
-		end)
-	end)
+local function open_live_window()
+	local buf = vim.api.nvim_create_buf(false, true)
+	vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
+	vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
+	vim.api.nvim_buf_set_option(buf, "swapfile", false)
+	vim.api.nvim_buf_set_option(buf, "filetype", "markdown")
+
+	local width = math.floor(vim.o.columns * 0.7)
+	local height = math.floor(vim.o.lines * 0.6)
+	local row = math.floor((vim.o.lines - height) / 2)
+	local col = math.floor((vim.o.columns - width) / 2)
+
+	local win = vim.api.nvim_open_win(buf, true, {
+		relative = "editor",
+		width = width,
+		height = height,
+		row = row,
+		col = col,
+		style = "minimal",
+		border = "rounded",
+		title = "Codex — Running (00:00)",
+		title_pos = "center",
+	})
+
+	return buf, win
+end
+
+local function update_window_title(win, elapsed, model)
+	if not vim.api.nvim_win_is_valid(win) then
+		return
+	end
+	local title = string.format("Codex — Running (%s)", elapsed)
+	if model and model ~= "" then
+		title = title .. " — " .. model
+	end
+	local config = vim.api.nvim_win_get_config(win)
+	config.title = title
+	vim.api.nvim_win_set_config(win, config)
+end
+
+local function append_live(buf, lines)
+	if not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+	if type(lines) == "string" then
+		lines = { lines }
+	end
+	vim.api.nvim_buf_set_lines(buf, -1, -1, false, lines)
+end
+
+local function run_codex_job(cmd, input, handlers)
+	local stdout_accum = {}
+	local stderr_accum = {}
+
+	local job_id = vim.fn.jobstart(cmd, {
+		stdin = "pipe",
+		on_stdout = function(_, data)
+			if data then
+				for _, line in ipairs(data) do
+					if line ~= "" then
+						table.insert(stdout_accum, line)
+					end
+				end
+				if handlers.on_stdout then
+					handlers.on_stdout(data)
+				end
+			end
+		end,
+		on_stderr = function(_, data)
+			if data then
+				for _, line in ipairs(data) do
+					if line ~= "" then
+						table.insert(stderr_accum, line)
+					end
+				end
+				if handlers.on_stderr then
+					handlers.on_stderr(data)
+				end
+			end
+		end,
+		on_exit = function(_, code)
+			if handlers.on_exit then
+				handlers.on_exit({
+					code = code,
+					stdout = table.concat(stdout_accum, "\n"),
+					stderr = table.concat(stderr_accum, "\n"),
+				})
+			end
+		end,
+	})
+
+	if job_id <= 0 then
+		return nil
+	end
+
+	vim.fn.chansend(job_id, input)
+	vim.fn.chanclose(job_id, "stdin")
+	return job_id
 end
 
 function M.run()
-	if not vim.system then
-		vim.notify("vim.system is not available in this Neovim version", vim.log.levels.ERROR)
+	if not vim.fn.jobstart then
+		vim.notify("vim.fn.jobstart is not available in this Neovim version", vim.log.levels.ERROR)
 		return
 	end
 
@@ -207,14 +306,10 @@ function M.run()
 		session_id = nil
 	end
 
-	local function build_cmd(use_resume, output_path)
+	local function build_cmd(use_resume)
 		local cmd = { helper, "exec" }
 		if M.config.json then
 			table.insert(cmd, "--json")
-		end
-		if M.config.output_last_message and output_path then
-			table.insert(cmd, "--output-last-message")
-			table.insert(cmd, output_path)
 		end
 		for _, flag in ipairs(M.config.flags or {}) do
 			table.insert(cmd, flag)
@@ -229,18 +324,39 @@ function M.run()
 
 	vim.notify("Running Codex...", vim.log.levels.INFO)
 
-	local function read_output_message(path)
-		if not path or vim.fn.filereadable(path) ~= 1 then
-			return ""
+	local prev_win = vim.api.nvim_get_current_win()
+	local live_buf, live_win = open_live_window()
+	local start_time = vim.loop.hrtime()
+	local model_label = nil
+	local assistant_lines = {}
+
+	local timer = vim.loop.new_timer()
+	timer:start(0, 1000, function()
+		local elapsed = math.floor((vim.loop.hrtime() - start_time) / 1e9)
+		local minutes = math.floor(elapsed / 60)
+		local seconds = elapsed % 60
+	vim.schedule(function()
+		update_window_title(live_win, string.format("%02d:%02d", minutes, seconds), model_label)
+	end)
+	end)
+
+	local function stop_timer()
+		if timer then
+			timer:stop()
+			timer:close()
 		end
-		local ok, lines = pcall(vim.fn.readfile, path)
-		if ok and lines then
-			return table.concat(lines, "\n")
-		end
-		return ""
 	end
 
-	local function handle_result(result, extra_stderr, output_path)
+	local function close_live_window()
+		if vim.api.nvim_win_is_valid(live_win) then
+			vim.api.nvim_win_close(live_win, true)
+		end
+		if vim.api.nvim_win_is_valid(prev_win) then
+			vim.api.nvim_set_current_win(prev_win)
+		end
+	end
+
+	local function handle_result(result, extra_stderr)
 		local stdout = result.stdout or ""
 		local stderr = result.stderr or ""
 		if extra_stderr and extra_stderr:match("%S") then
@@ -251,53 +367,119 @@ function M.run()
 			end
 		end
 
-		local message = ""
-		if M.config.output_last_message then
-			message = read_output_message(output_path)
-			if output_path then
-				vim.fn.delete(output_path)
-			end
-		else
-			message = stdout
-		end
-
 		local new_session_id = nil
 		if M.config.json then
 			new_session_id = parse_session_id(stdout)
 		end
 
+		local message = table.concat(assistant_lines, "\n")
 		append_block(buf, message or "", stderr or "")
 		if new_session_id and new_session_id ~= "" then
 			ensure_session_header(buf, M.config.session_header, new_session_id)
 		end
+		stop_timer()
 		vim.notify("Codex finished", vim.log.levels.INFO)
 	end
 
-	if session_id and session_id ~= "" then
-		local resume_output = vim.fn.tempname()
-		run_codex(build_cmd(true, resume_output), prompt or "\n", function(resume_result)
-			if resume_result.code == 0 then
-				handle_result(resume_result, nil, resume_output)
-			else
-				if vim.fn.filereadable(resume_output) == 1 then
-					vim.fn.delete(resume_output)
+	local function stream_handler(data)
+		for _, line in ipairs(data or {}) do
+			if line ~= "" then
+				local event = parse_stream_event(line)
+				if event and event.type == "session_meta" and event.payload then
+					local provider = event.payload.model_provider
+					local model = event.payload.model or event.payload.model_name or event.payload.model_id
+					if event.payload.model and type(event.payload.model) == "string" then
+						model = event.payload.model
+					end
+					if provider and model then
+						model_label = provider .. ":" .. model
+					elseif provider then
+						model_label = provider
+					end
+				elseif event and event.type == "turn_context" and event.payload and event.payload.model then
+					local model = event.payload.model
+					if model and model:match("%S") then
+						local provider = event.payload.model_provider
+						if provider and provider:match("%S") then
+							model_label = provider .. ":" .. model
+						else
+							model_label = model
+						end
+					end
 				end
-				local resume_err = resume_result.stderr or ""
-				local resume_note = "Resume failed (exit code " .. tostring(resume_result.code) .. ")"
-				if resume_err ~= "" then
-					resume_note = resume_note .. "\n" .. resume_err
+				if event
+					and event.type == "response_item"
+					and event.payload
+					and event.payload.type == "message"
+					and event.payload.role == "assistant"
+				then
+					local content = event.payload.content or {}
+					for _, item in ipairs(content) do
+						if item.type == "output_text" or item.type == "input_text" then
+							local text_lines = vim.split(item.text or "", "\n", { plain = true })
+							for _, text_line in ipairs(text_lines) do
+								table.insert(assistant_lines, text_line)
+							end
+							append_live(live_buf, text_lines)
+						end
+					end
 				end
-				local full_output = vim.fn.tempname()
-				run_codex(build_cmd(false, full_output), fallback_prompt, function(full_result)
-					handle_result(full_result, resume_note, full_output)
-				end)
 			end
-		end)
+		end
+	end
+
+	local function stderr_handler(_)
+	end
+
+	if session_id and session_id ~= "" then
+		local job_id = run_codex_job(build_cmd(true), prompt or "\n", {
+			on_stdout = stream_handler,
+			on_stderr = stderr_handler,
+			on_exit = function(resume_result)
+				if resume_result.code == 0 then
+					handle_result(resume_result, nil)
+					close_live_window()
+				else
+					local resume_err = resume_result.stderr or ""
+					local resume_note = "Resume failed (exit code " .. tostring(resume_result.code) .. ")"
+					if resume_err ~= "" then
+						resume_note = resume_note .. "\n" .. resume_err
+					end
+					vim.notify("Resume failed, running full prompt", vim.log.levels.WARN)
+					run_codex_job(build_cmd(false), fallback_prompt, {
+						on_stdout = stream_handler,
+						on_stderr = stderr_handler,
+						on_exit = function(full_result)
+							handle_result(full_result, resume_note)
+							if full_result.code == 0 then
+								close_live_window()
+							end
+						end,
+					})
+				end
+			end,
+		})
+		if not job_id then
+			stop_timer()
+			close_live_window()
+			vim.notify("Failed to start Codex job", vim.log.levels.ERROR)
+		end
 	else
-		local full_output = vim.fn.tempname()
-		run_codex(build_cmd(false, full_output), fallback_prompt, function(result)
-			handle_result(result, nil, full_output)
-		end)
+		local job_id = run_codex_job(build_cmd(false), fallback_prompt, {
+			on_stdout = stream_handler,
+			on_stderr = stderr_handler,
+			on_exit = function(result)
+				handle_result(result, nil)
+				if result.code == 0 then
+					close_live_window()
+				end
+			end,
+		})
+		if not job_id then
+			stop_timer()
+			close_live_window()
+			vim.notify("Failed to start Codex job", vim.log.levels.ERROR)
+		end
 	end
 end
 

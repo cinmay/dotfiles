@@ -56,6 +56,9 @@ Write your next prompt below the `--- Next Prompt ---` marker.
 - If the file has a valid session ID, the next prompt is sent as a resume.
 - If no session ID exists (or resume fails), the full thread is sent.
 - After a successful run, the session ID is inserted or replaced at the top.
+- A floating live buffer grabs focus and streams assistant output while Codex runs.
+- The window title shows elapsed time and the model once detected.
+- The live buffer closes on success and stays open on errors.
 
 ## Getting Started
 1) Create a thread file under `.ai/threads/`.
