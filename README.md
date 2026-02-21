@@ -49,10 +49,6 @@ Docs: [Codex thread workflow](nvim/lua/custom/codex/README.md)
 
 https://github.com/mg979/vim-visual-multi
 
-## Gnome Extensions
-
-https://extensions.gnome.org/extension/545/hide-top-bar/
-https://extensions.gnome.org/extension/5278/pano/
 
 ## Bootstrap dotfiles
 
@@ -61,43 +57,6 @@ https://extensions.gnome.org/extension/5278/pano/
 
 ```bash
 stow -t "$HOME" omarchy
-```
-
-## Prerequests
-
-```bash
- sudo apt install ripgrep alacritty tmux zsh gir1.2-gda-5.0 gir1.2-gsound-1.0 build-essential cmake gettext ninja-build unzip
-
-```
-
-- Install rust and cargo for htmx lsp
-- Install node
-
-Install fastfetch
-https://github.com/fastfetch-cli/fastfetch
-
-## Link config files
-
-```bash
-    ln -s Documents/dotfiles/.zshrc .zshrc
-    ln -s Documents/dotfiles/.tmux.conf .tmux.conf
-
-    cd .config
-    ln -s ../Documents/dotfiles/alacritty alacritty
-    ln -s ../Documents/dotfiles/nvim nvim
-    ln -s ../Documents/dotfiles/ghostty ghostty
-```
-
-## Fonts
-
-https://www.nerdfonts.com/font-downloads
-
-```bash
-    mkdir .local/share/fonts
-    cd Downloads
-    unzip JetBrainsMono.zip
-    mv *.ttf ~/.local/share/fonts -v
-    fc-cache -f -v
 ```
 
 ## Install Neovim
@@ -140,14 +99,8 @@ Use ctrl + f to search for the language you want to install
 
 run :Verbose map <the keybinding> e.g. :Verbose map <leader>g
 
-## Rebuild hotkey cheat sheet
-
-```bash
-cd tools/hotkeyCheetSheet
-npx nodemon hotKeyCheetSheet.ts
-```
-
 ## Rider keybindings
+
 
 Link to plugins: https://github.com/JetBrains/ideavim/wiki/IdeaVim-Plugins
 Link to commands https://github.com/JetBrains/ideavim/blob/master/src/main/java/com/maddyhome/idea/vim/package-info.java
