@@ -1,5 +1,6 @@
 {
   "LuaSnip": { "branch": "master", "commit": "5a1e39223db9a0498024a77b8441169d260c8c25" },
+  "aether": { "branch": "v3", "commit": "50643b773cf509080bcc7da361a81392d0edc9db" },
   "auto-save.nvim": { "branch": "main", "commit": "5fbcaac0a2698c87a9a1bd2083cb6949505cca12" },
   "avante.nvim": { "branch": "main", "commit": "cf352f6f4653dddbac0980c06ca3f97554f80d80" },
   "bamboo.nvim": { "branch": "master", "commit": "1309bc88bffcf1bedc3e84e7fa9004de93da774a" },

@@ -724,11 +724,6 @@ require("lazy").setup({
 	-- 	end,
 	-- },
 	--
-	{
-		"catppuccin/nvim",
-		name = "catppuccin",
-		priority = 1000,
-	},
 	-- Highlight todo, notes, etc in comments
 	{
 		"folke/todo-comments.nvim",
@@ -852,6 +847,7 @@ require("lazy").setup({
 	--
 	--  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
 	{ import = "custom.plugins" },
+	{ import = "plugins" },
 	--
 	-- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
 	-- Or use telescope!
@@ -879,6 +875,6 @@ require("lazy").setup({
 	},
 })
 
-vim.cmd.colorscheme("catppuccin-mocha")
+require("custom.omarchy_theme").apply()
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
