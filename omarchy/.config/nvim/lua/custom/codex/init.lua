@@ -113,6 +113,7 @@ end
 
 local function parse_session_id(stdout)
 	local session_id = nil
+	local thread_id = nil
 	local decoded_any = false
 
 	for _, line in ipairs(vim.split(stdout or "", "\n", { plain = true, trimempty = true })) do
@@ -123,7 +124,7 @@ local function parse_session_id(stdout)
 				session_id = event.payload.id
 			end
 			if event.type == "thread.started" and event.thread_id then
-				session_id = event.thread_id
+				thread_id = event.thread_id
 			end
 		end
 	end
@@ -132,7 +133,22 @@ local function parse_session_id(stdout)
 		return nil
 	end
 
-	return session_id
+	return session_id or thread_id
+end
+
+local function clean_success_stderr(stderr, code)
+	if code ~= 0 or not stderr or stderr == "" then
+		return stderr
+	end
+
+	local lines = {}
+	for _, line in ipairs(vim.split(stderr, "\n", { plain = true })) do
+		if not line:match("failed to record rollout items: thread [%w%-]+ not found") then
+			table.insert(lines, line)
+		end
+	end
+
+	return table.concat(lines, "\n")
 end
 
 local function append_block(buf, stdout, stderr)
@@ -409,6 +425,8 @@ function M.run()
 				stderr = extra_stderr .. "\n" .. stderr
 			end
 		end
+
+		stderr = clean_success_stderr(stderr, result.code)
 
 		local new_session_id = nil
 		if M.config.json then
