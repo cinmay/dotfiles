@@ -172,10 +172,10 @@ end
 
 local function open_live_window()
 	local buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(buf, "swapfile", false)
-	vim.api.nvim_buf_set_option(buf, "filetype", "markdown")
+	vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
+	vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+	vim.api.nvim_set_option_value("swapfile", false, { buf = buf })
+	vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf })
 
 	local width = math.floor(vim.o.columns * 0.7)
 	local height = math.floor(vim.o.lines * 0.6)
@@ -353,15 +353,15 @@ function M.run()
 
 	local prev_win = vim.api.nvim_get_current_win()
 	local live_buf, live_win = open_live_window()
-	local start_time = vim.loop.hrtime()
+	local start_time = vim.uv.hrtime()
 	local model_label = nil
 	local assistant_lines = {}
 	local raw_lines = {}
 	local debug_lines = 0
 
-	local timer = vim.loop.new_timer()
+	local timer = vim.uv.new_timer()
 	timer:start(0, 1000, function()
-		local elapsed = math.floor((vim.loop.hrtime() - start_time) / 1e9)
+		local elapsed = math.floor((vim.uv.hrtime() - start_time) / 1e9)
 		local minutes = math.floor(elapsed / 60)
 		local seconds = elapsed % 60
 		vim.schedule(function()

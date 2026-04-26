@@ -34,7 +34,7 @@ return {
 
 				local map = function(keys, func, desc, mode)
 					mode = mode or "n"
-					vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = "LSP: " .. desc })
+					vim.keymap.set(mode, keys, func, { buf = event.buf, desc = "LSP: " .. desc })
 				end
 
 				-- Rename
