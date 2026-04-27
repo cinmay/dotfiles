@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+
+
+DEFAULT_ENDPOINT = "http://127.0.0.1:8880/v1/audio/speech"
+DEFAULT_MODEL = "kokoro"
+DEFAULT_VOICE = "af_heart"
+DEFAULT_RESPONSE_FORMAT = "mp3"
+DEFAULT_TMP_DIR = "/tmp/nvim-tts"
+DEFAULT_MAX_CHARS = 12000
+
+
+def env_value(name, default):
+    value = os.environ.get(name)
+    return value if value not in (None, "") else default
+
+
+def env_int(name, default):
+    value = os.environ.get(name)
+    if value in (None, ""):
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        raise SystemExit(f"{name} must be an integer")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Send stdin text to local TTS and play it with mpv.")
+    parser.add_argument("--endpoint", default=env_value("NVIM_TTS_ENDPOINT", DEFAULT_ENDPOINT))
+    parser.add_argument("--model", default=env_value("NVIM_TTS_MODEL", DEFAULT_MODEL))
+    parser.add_argument("--voice", default=env_value("NVIM_TTS_VOICE", DEFAULT_VOICE))
+    parser.add_argument(
+        "--response-format",
+        default=env_value("NVIM_TTS_RESPONSE_FORMAT", DEFAULT_RESPONSE_FORMAT),
+    )
+    parser.add_argument("--tmp-dir", default=env_value("NVIM_TTS_TMP_DIR", DEFAULT_TMP_DIR))
+    parser.add_argument("--max-chars", type=int, default=env_int("NVIM_TTS_MAX_CHARS", DEFAULT_MAX_CHARS))
+    return parser.parse_args()
+
+
+def normalize_text(text):
+    text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not text:
+        return ""
+
+    paragraphs = re.split(r"\n\s*\n+", text)
+    cleaned = []
+    for paragraph in paragraphs:
+        lines = []
+        for line in paragraph.split("\n"):
+            line = re.sub(r"[ \t]+", " ", line.strip())
+            if line:
+                lines.append(line)
+        if lines:
+            cleaned.append(" ".join(lines))
+
+    return "\n\n".join(cleaned)
+
+
+def socket_path(tmp_dir):
+    return os.path.join(tmp_dir, "mpv.sock")
+
+
+def send_mpv_command(sock_path, command, timeout=1.0):
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+            client.settimeout(timeout)
+            client.connect(sock_path)
+            payload = json.dumps({"command": command}).encode("utf-8") + b"\n"
+            client.sendall(payload)
+            try:
+                client.recv(4096)
+            except socket.timeout:
+                pass
+        return True
+    except (FileNotFoundError, ConnectionRefusedError, OSError):
+        return False
+
+
+def stop_previous_playback(sock_path):
+    if not os.path.exists(sock_path):
+        return
+
+    stopped = send_mpv_command(sock_path, ["quit"])
+    deadline = time.monotonic() + 1.5
+    while stopped and os.path.exists(sock_path) and time.monotonic() < deadline:
+        time.sleep(0.05)
+
+    if os.path.exists(sock_path) and not send_mpv_command(sock_path, ["get_property", "pause"]):
+        try:
+            os.unlink(sock_path)
+        except OSError:
+            pass
+
+
+def post_tts(args, text):
+    payload = {
+        "model": args.model,
+        "voice": args.voice,
+        "input": text,
+        "response_format": args.response_format,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        args.endpoint,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            body = response.read()
+            content_type = response.headers.get("Content-Type", "")
+    except urllib.error.HTTPError as error:
+        body = error.read().decode("utf-8", errors="replace").strip()
+        detail = f": {body[:500]}" if body else ""
+        raise RuntimeError(f"TTS request failed with HTTP {error.code}{detail}") from error
+    except urllib.error.URLError as error:
+        raise RuntimeError(f"TTS endpoint is not reachable at {args.endpoint}: {error.reason}") from error
+
+    if not body:
+        raise RuntimeError("TTS server returned an empty audio response")
+
+    lower_content_type = content_type.lower()
+    if "application/json" in lower_content_type:
+        detail = body.decode("utf-8", errors="replace").strip()
+        raise RuntimeError(f"TTS server returned JSON instead of audio: {detail[:500]}")
+
+    if lower_content_type and not (
+        "audio/" in lower_content_type or "application/octet-stream" in lower_content_type
+    ):
+        detail = body[:500].decode("utf-8", errors="replace").strip()
+        raise RuntimeError(f"TTS server returned non-audio response ({content_type}): {detail}")
+
+    return body
+
+
+def response_extension(response_format):
+    extension = re.sub(r"[^A-Za-z0-9]", "", response_format or "")
+    return extension or DEFAULT_RESPONSE_FORMAT
+
+
+def save_audio(tmp_dir, response_format, body):
+    os.makedirs(tmp_dir, mode=0o700, exist_ok=True)
+
+    audio_path = os.path.join(tmp_dir, f"current.{response_extension(response_format)}")
+    temp_path = audio_path + ".tmp"
+
+    with open(temp_path, "wb") as audio_file:
+        audio_file.write(body)
+
+    os.replace(temp_path, audio_path)
+
+    if os.path.getsize(audio_path) == 0:
+        raise RuntimeError("Generated audio file is empty")
+
+    return audio_path
+
+
+def start_mpv(audio_path, sock_path):
+    if shutil.which("mpv") is None:
+        raise RuntimeError("mpv is not installed or not in PATH")
+
+    command = [
+        "mpv",
+        "--no-video",
+        f"--input-ipc-server={sock_path}",
+        audio_path,
+    ]
+
+    process = subprocess.Popen(
+        command,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+    time.sleep(0.1)
+    if process.poll() not in (None, 0):
+        raise RuntimeError("mpv failed to start playback")
+
+
+def main():
+    args = parse_args()
+    text = normalize_text(sys.stdin.read())
+
+    if not text:
+        print("No text provided for TTS", file=sys.stderr)
+        return 1
+
+    if len(text) > args.max_chars:
+        print(
+            f"Text is too long for TTS: {len(text)} characters, max is {args.max_chars}",
+            file=sys.stderr,
+        )
+        return 1
+
+    sock_path = socket_path(args.tmp_dir)
+
+    try:
+        os.makedirs(args.tmp_dir, mode=0o700, exist_ok=True)
+        stop_previous_playback(sock_path)
+        audio = post_tts(args, text)
+        audio_path = save_audio(args.tmp_dir, args.response_format, audio)
+        stop_previous_playback(sock_path)
+        start_mpv(audio_path, sock_path)
+    except RuntimeError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+    except OSError as error:
+        print(f"TTS playback failed: {error}", file=sys.stderr)
+        return 1
+
+    print(f"TTS playback started: {audio_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

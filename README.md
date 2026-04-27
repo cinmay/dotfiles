@@ -99,6 +99,52 @@ Use ctrl + f to search for the language you want to install
 
 run :Verbose map <the keybinding> e.g. :Verbose map <leader>g
 
+## Local Neovim Text To Speech
+
+Dependencies on Arch:
+
+```bash
+sudo pacman -S mpv socat
+```
+
+Start Kokoro-FastAPI with Podman:
+
+```bash
+podman run --rm \
+  --name kokoro-tts \
+  -p 127.0.0.1:8880:8880 \
+  -e HOST=0.0.0.0 \
+  -e PORT=8880 \
+  ghcr.io/remsky/kokoro-fastapi-cpu:latest
+```
+
+Test the TTS endpoint manually:
+
+```bash
+curl -s http://127.0.0.1:8880/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "kokoro",
+    "voice": "af_heart",
+    "input": "Hello from local text to speech in Neovim.",
+    "response_format": "mp3"
+  }' \
+  --output /tmp/test-tts.mp3
+
+mpv /tmp/test-tts.mp3
+```
+
+Neovim usage examples:
+
+```text
+gsiw        speak inner word
+gsap        speak paragraph
+gss         speak current line
+3gss        speak 3 lines
+visual gs   speak selection
+<leader>rp  pause/resume
+```
+
 ## Rider keybindings
 
 

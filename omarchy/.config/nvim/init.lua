@@ -226,6 +226,21 @@ vim.keymap.set("n", "<leader>ta", ":ASToggle<CR>", { desc = "toggle auto save" }
 -- Codex thread workflow
 require("custom.codex").setup()
 
+require("local_tts").setup({
+	endpoint = "http://127.0.0.1:8880/v1/audio/speech",
+	model = "kokoro",
+	voice = "af_heart",
+	response_format = "mp3",
+	tmp_dir = "/tmp/nvim-tts",
+	max_chars = 12000,
+	mappings = {
+		operator = "gs",
+		line = "gss",
+		visual = "gs",
+		pause_toggle = "<leader>rp",
+	},
+})
+
 -- vim.keymap.set("n", "<leader>th", function()
 -- 	vim.o.hlsearch = not vim.o.hlsearch
 -- 	print("Highlight search: " .. (vim.o.hlsearch and "on" or "off"))

@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+import socket
+import sys
+
+
+DEFAULT_TMP_DIR = "/tmp/nvim-tts"
+
+
+def env_value(name, default):
+    value = os.environ.get(name)
+    return value if value not in (None, "") else default
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Control Neovim TTS mpv playback.")
+    parser.add_argument("command", choices=["pause", "resume", "toggle", "stop", "status"])
+    parser.add_argument("--tmp-dir", default=env_value("NVIM_TTS_TMP_DIR", DEFAULT_TMP_DIR))
+    return parser.parse_args()
+
+
+def socket_path(tmp_dir):
+    return os.path.join(tmp_dir, "mpv.sock")
+
+
+def send_command(sock_path, command, timeout=1.0):
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+        client.settimeout(timeout)
+        client.connect(sock_path)
+        payload = json.dumps({"command": command}).encode("utf-8") + b"\n"
+        client.sendall(payload)
+
+        chunks = []
+        while True:
+            chunk = client.recv(4096)
+            if not chunk:
+                break
+            chunks.append(chunk)
+            if b"\n" in chunk:
+                break
+
+    raw = b"".join(chunks).decode("utf-8", errors="replace").strip()
+    if not raw:
+        return {}
+
+    return json.loads(raw)
+
+
+def mpv_command(name):
+    if name == "pause":
+        return ["set_property", "pause", True]
+    if name == "resume":
+        return ["set_property", "pause", False]
+    if name == "toggle":
+        return ["cycle", "pause"]
+    if name == "stop":
+        return ["quit"]
+    raise ValueError(name)
+
+
+def missing_socket(command):
+    if command in ("status", "stop"):
+        print("TTS playback: not running")
+        return 0
+
+    print("No active TTS playback", file=sys.stderr)
+    return 1
+
+
+def status(sock_path):
+    if not os.path.exists(sock_path):
+        print("TTS playback: not running")
+        return 0
+
+    try:
+        response = send_command(sock_path, ["get_property", "pause"])
+    except (FileNotFoundError, ConnectionRefusedError, OSError, json.JSONDecodeError):
+        print("TTS playback: not running")
+        return 0
+
+    if response.get("error") not in (None, "success"):
+        print("TTS playback: running")
+        return 0
+
+    if response.get("data") is True:
+        print("TTS playback: paused")
+    else:
+        print("TTS playback: playing")
+
+    return 0
+
+
+def main():
+    args = parse_args()
+    sock_path = socket_path(args.tmp_dir)
+
+    if args.command == "status":
+        return status(sock_path)
+
+    if not os.path.exists(sock_path):
+        return missing_socket(args.command)
+
+    try:
+        send_command(sock_path, mpv_command(args.command))
+    except (FileNotFoundError, ConnectionRefusedError, OSError, json.JSONDecodeError):
+        return missing_socket(args.command)
+
+    if args.command == "pause":
+        print("TTS playback paused")
+    elif args.command == "resume":
+        print("TTS playback resumed")
+    elif args.command == "toggle":
+        print("TTS playback pause toggled")
+    elif args.command == "stop":
+        print("TTS playback stopped")
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
