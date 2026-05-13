@@ -14,19 +14,19 @@ Docs: [Codex thread workflow](nvim/lua/custom/codex/README.md)
 | Tesing                    |             |     |                  | Spellchecking                  |
 | Breakpoints               |             |     |                  | Relative line numbers          |
 | Telescope resume          |             |     |                  | Telerscope ignore node_modules |
-| LasyGit                   |             |     |                  | Tmux                           |
-| Multi clipboard           |             |     |                  | Harpoon                        |
+| Install Neotest           |             |     |                  | Tmux                           |
+| |             |     |                  | Harpoon                        |
 | Emojis                    |             |     |                  | Copilot                        |
 | Show Package size         |             |     |                  | Autosave                       |
 | Show types, uses etc      |             |     |                  | Printable Keyboard shortcuts   |
 | Add telescope help text   |             |     |                  | Autoformatting                 |
-| Install trouble? or not   |             |     |                  | 80 line ruler                  |
-| TTS better voice          |             |     |                  | Center window                  |
+| |             |     |                  | 80 line ruler                  |
+|  |             |     |                  | Center window                  |
 | Fix, Harpoon autosave     |             |     |                  | Pretier                        |
 | telekasten.nvim           |             |     |                  | Typescript                     |
 | Obsidian note integration |             |     |                  | Linter                         |
-| Find new wallpaper        |             |     |                  | Kanban                         |
-| Install Neotest           |             |     |                  | Prettier                       |
+| |             |     |                  | Kanban                         |
+| |             |     |                  | Prettier                       |
 |                           |             |     |                  | Prettier add html, css, yaml   |
 |                           |             |     |                  | Zoom in and out                |
 |                           |             |     |                  | VimBeGood                      |
@@ -46,6 +46,11 @@ Docs: [Codex thread workflow](nvim/lua/custom/codex/README.md)
 |                           |             |     |                  | Nerd Font                      |
 |                           |             |     |                  | Markdown preview               |
 |                           |             |     |                  | Add dependencies reademe       |
+|                           |             |     |                  | LasyGit                   |
+|                           |             |     |                  | find new wallpaper       |
+|                           |             |                 |     |  TTS better voice  |
+|                           |             |     |                  | Multi clipboard          |
+
 
 https://github.com/mg979/vim-visual-multi
 
