@@ -11,6 +11,7 @@ M.config = {
 	debug = false,
 	debug_max_lines = 200,
 	close_delay_ms = 1000,
+	done_sound = vim.fn.stdpath("config") .. "/lua/custom/codex/done.mp3",
 }
 
 local function is_thread_buffer(buf, cwd)
@@ -183,6 +184,18 @@ local function append_block(buf, stdout, stderr)
 	table.insert(lines, "")
 
 	vim.api.nvim_buf_set_lines(buf, -1, -1, false, lines)
+end
+
+local function play_done_sound()
+	local sound = M.config.done_sound
+	if not sound or sound == "" or vim.fn.filereadable(sound) ~= 1 then
+		return
+	end
+	if vim.fn.executable("mpv") ~= 1 then
+		return
+	end
+
+	vim.fn.jobstart({ "mpv", "--no-video", "--really-quiet", sound }, { detach = true })
 end
 
 local function open_live_window()
@@ -442,6 +455,7 @@ function M.run()
 		end
 		stop_timer()
 		vim.notify("Codex finished", vim.log.levels.INFO)
+		play_done_sound()
 	end
 
 	local function append_progress(line)
