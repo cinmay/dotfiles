@@ -16,13 +16,13 @@ Docs: [Codex thread workflow](nvim/lua/custom/codex/README.md)
 | Telescope resume          |             |     |                  | Telerscope ignore node_modules |
 | Install Neotest           |             |     |                  | Tmux                           |
 | |             |     |                  | Harpoon                        |
-| Emojis                    |             |     |                  | Copilot                        |
+| |             |     |                  | Copilot                        |
 | Show Package size         |             |     |                  | Autosave                       |
 | Show types, uses etc      |             |     |                  | Printable Keyboard shortcuts   |
 | Add telescope help text   |             |     |                  | Autoformatting                 |
 | |             |     |                  | 80 line ruler                  |
 |  |             |     |                  | Center window                  |
-| Fix, Harpoon autosave     |             |     |                  | Pretier                        |
+| |             |     |                  | Pretier                        |
 | telekasten.nvim           |             |     |                  | Typescript                     |
 | Obsidian note integration |             |     |                  | Linter                         |
 | |             |     |                  | Kanban                         |
@@ -50,6 +50,8 @@ Docs: [Codex thread workflow](nvim/lua/custom/codex/README.md)
 |                           |             |     |                  | find new wallpaper       |
 |                           |             |                 |     |  TTS better voice  |
 |                           |             |     |                  | Multi clipboard          |
+| | | | | Fix, Harpoon autosave     |
+| | | | | Emojis                   | 
 
 
 https://github.com/mg979/vim-visual-multi
