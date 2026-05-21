@@ -159,23 +159,22 @@ local function append_block(buf, stdout, stderr)
 	table.insert(lines, M.config.time_prefix .. timestamp)
 	table.insert(lines, M.config.delimiter)
 	table.insert(lines, "")
-	table.insert(lines, "```Markdown")
+	table.insert(lines, "Codex output:")
 	if stdout and stdout ~= "" then
 		local out_lines = vim.split(stdout, "\n", { plain = true, trimempty = true })
 		for _, line in ipairs(out_lines) do
 			table.insert(lines, line)
 		end
 	end
-	table.insert(lines, "```")
+	-- table.insert(lines, "```")
 
 	if stderr and stderr:match("%S") then
 		table.insert(lines, "")
-		table.insert(lines, "```text")
+		table.insert(lines, "text")
 		local err_lines = vim.split(stderr, "\n", { plain = true, trimempty = true })
 		for _, line in ipairs(err_lines) do
 			table.insert(lines, line)
 		end
-		table.insert(lines, "```")
 	end
 
 	table.insert(lines, "")
@@ -488,7 +487,8 @@ function M.run()
 				end
 			end
 		end
-		if event
+		if
+			event
 			and event.type == "response_item"
 			and event.payload
 			and event.payload.type == "message"
@@ -504,7 +504,8 @@ function M.run()
 					append_progress(text_lines)
 				end
 			end
-		elseif event
+		elseif
+			event
 			and event.type == "item.completed"
 			and event.item
 			and event.item.type == "agent_message"
@@ -539,8 +540,7 @@ function M.run()
 		end
 	end
 
-	local function stderr_handler(_)
-	end
+	local function stderr_handler(_) end
 
 	if session_id and session_id ~= "" then
 		local job_id = run_codex_job(build_cmd(true), prompt or "\n", {
