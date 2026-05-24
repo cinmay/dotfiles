@@ -18,6 +18,8 @@ DEFAULT_VOICE = "af_heart"
 DEFAULT_RESPONSE_FORMAT = "mp3"
 DEFAULT_TMP_DIR = "/tmp/nvim-tts"
 DEFAULT_MAX_CHARS = 12000
+DEFAULT_VOLUME = 125
+DEFAULT_VOLUME_MAX = 200
 
 
 def env_value(name, default):
@@ -46,6 +48,8 @@ def parse_args():
     )
     parser.add_argument("--tmp-dir", default=env_value("NVIM_TTS_TMP_DIR", DEFAULT_TMP_DIR))
     parser.add_argument("--max-chars", type=int, default=env_int("NVIM_TTS_MAX_CHARS", DEFAULT_MAX_CHARS))
+    parser.add_argument("--volume", type=int, default=env_int("NVIM_TTS_VOLUME", DEFAULT_VOLUME))
+    parser.add_argument("--volume-max", type=int, default=env_int("NVIM_TTS_VOLUME_MAX", DEFAULT_VOLUME_MAX))
     return parser.parse_args()
 
 
@@ -169,7 +173,7 @@ def save_audio(tmp_dir, response_format, body):
     return audio_path
 
 
-def start_mpv(audio_path, sock_path):
+def start_mpv(audio_path, sock_path, volume, volume_max):
     if shutil.which("mpv") is None:
         raise RuntimeError("mpv is not installed or not in PATH")
 
@@ -177,6 +181,8 @@ def start_mpv(audio_path, sock_path):
         "mpv",
         "--no-video",
         f"--input-ipc-server={sock_path}",
+        f"--volume-max={volume_max}",
+        f"--volume={volume}",
         audio_path,
     ]
 
@@ -208,6 +214,13 @@ def main():
         )
         return 1
 
+    if args.volume < 0 or args.volume_max < 100:
+        print("TTS volume must be >= 0 and volume-max must be >= 100", file=sys.stderr)
+        return 1
+
+    if args.volume > args.volume_max:
+        args.volume_max = args.volume
+
     sock_path = socket_path(args.tmp_dir)
 
     try:
@@ -216,7 +229,7 @@ def main():
         audio = post_tts(args, text)
         audio_path = save_audio(args.tmp_dir, args.response_format, audio)
         stop_previous_playback(sock_path)
-        start_mpv(audio_path, sock_path)
+        start_mpv(audio_path, sock_path, args.volume, args.volume_max)
     except RuntimeError as error:
         print(str(error), file=sys.stderr)
         return 1

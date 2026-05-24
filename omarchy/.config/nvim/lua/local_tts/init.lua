@@ -7,6 +7,8 @@ local defaults = {
 	response_format = "mp3",
 	tmp_dir = "/tmp/nvim-tts",
 	max_chars = 12000,
+	volume = 125,
+	volume_max = 200,
 	speak_script = vim.fn.stdpath("config") .. "/scripts/nvim-tts-speak",
 	control_script = vim.fn.stdpath("config") .. "/scripts/nvim-tts-control",
 	mappings = {
@@ -63,6 +65,8 @@ local function env()
 		NVIM_TTS_RESPONSE_FORMAT = M.config.response_format,
 		NVIM_TTS_TMP_DIR = M.config.tmp_dir,
 		NVIM_TTS_MAX_CHARS = tostring(M.config.max_chars),
+		NVIM_TTS_VOLUME = tostring(M.config.volume),
+		NVIM_TTS_VOLUME_MAX = tostring(M.config.volume_max),
 	}
 end
 

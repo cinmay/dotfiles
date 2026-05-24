@@ -233,6 +233,8 @@ require("local_tts").setup({
 	response_format = "mp3",
 	tmp_dir = "/tmp/nvim-tts",
 	max_chars = 12000,
+	volume = 200,
+	volume_max = 200,
 	mappings = {
 		operator = "gs",
 		line = "gss",
