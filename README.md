@@ -152,6 +152,9 @@ visual gs   speak selection
 <leader>rp  pause/resume
 ```
 
+Playback volume is configured in `require("local_tts").setup()` with `volume`
+and `volume_max`.
+
 ## Rider keybindings
 
 
