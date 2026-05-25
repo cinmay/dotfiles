@@ -155,6 +155,7 @@ return {
 			html = {
 				filetypes = { "html", "twig", "hbs" },
 			},
+			cssls = {},
 			ts_ls = {},
 			lua_ls = {
 				settings = {
