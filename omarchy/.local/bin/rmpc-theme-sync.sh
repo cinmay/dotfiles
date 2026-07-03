@@ -67,10 +67,16 @@ cat > "$cache_dir/theme.ron" <<EOF
     borders_style: (fg: "$border"),
     highlight_border_style: (fg: "$secondary", modifiers: "Bold"),
     progress_bar: (
+        symbols: ["█", "█", "█", " ", "█"],
+        track_style: None,
         elapsed_style: (fg: "$primary"),
         thumb_style: (fg: "$secondary"),
+        use_track_when_empty: true,
     ),
     scrollbar: (
+        symbols: ["│", "█", "▲", "▼"],
+        track_style: (),
+        ends_style: (),
         thumb_style: (fg: "$primary"),
     ),
     tab_bar: (
@@ -83,14 +89,6 @@ cat > "$cache_dir/theme.ron" <<EOF
         error: (fg: "$error", bg: "$background"),
         debug: (fg: "$success", bg: "$background"),
         trace: (fg: "$secondary", bg: "$background"),
-    ),
-    cava: (
-        bar_symbols: ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"],
-        inverted_bar_symbols: ["▔", "▔", "▔", "▀", "▀", "▀", "▀", "█"],
-        bar_color: (fg: "$primary"),
-        bar_spacing: 1,
-        bar_width: 1,
-        orientation: Bottom,
     ),
 )
 EOF

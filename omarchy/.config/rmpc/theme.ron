@@ -14,10 +14,16 @@
     borders_style: (fg: "#70A7B2"),
     highlight_border_style: (fg: "#BC92C0", modifiers: "Bold"),
     progress_bar: (
+        symbols: ["█", "█", "█", " ", "█"],
+        track_style: None,
         elapsed_style: (fg: "#70A7B2"),
         thumb_style: (fg: "#BC92C0"),
+        use_track_when_empty: true,
     ),
     scrollbar: (
+        symbols: ["│", "█", "▲", "▼"],
+        track_style: (),
+        ends_style: (),
         thumb_style: (fg: "#70A7B2"),
     ),
     tab_bar: (
@@ -30,13 +36,5 @@
         error: (fg: "#C28D8F", bg: "#010112"),
         debug: (fg: "#57977A", bg: "#010112"),
         trace: (fg: "#BC92C0", bg: "#010112"),
-    ),
-    cava: (
-        bar_symbols: ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"],
-        inverted_bar_symbols: ["▔", "▔", "▔", "▀", "▀", "▀", "▀", "█"],
-        bar_color: (fg: "#70A7B2"),
-        bar_spacing: 1,
-        bar_width: 1,
-        orientation: Bottom,
     ),
 )
