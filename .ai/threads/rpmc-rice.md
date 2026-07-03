@@ -635,3 +635,144 @@ For a true spectrogram, rmpc’s native Cava pane probably is not enough. The ne
 Time: 2026-07-03 14:14:12
 --- Next Prompt ---
 
+
+Next, let's double check that we are getting the absolute best audio quality. I see 44100Hz in some of the config files. etc. 
+The current system is 48kHz, 16-bit. But sometimes I connect 96kHz 24-bit DACs. 
+
+Have a look through the config files and the system to see if we are getting the best audio quality possible.
+
+Let me know what you find so we can have a discussion about what changes we might want to make to the config files to get the best audio quality possible before we make any changes.
+
+Time: 2026-07-03 16:06:41
+--- Codex Run ---
+
+Codex output:
+I’ll keep this as an audit and discussion prep, with no config changes. I’ll check the dotfiles first for hard-coded rates/formats, then query the live audio stack where the sandbox can reach it.
+I loaded the Omarchy guardrails and will keep this read-only. I’m starting with hard-coded audio rates/formats in the dotfiles, then I’ll compare that against PipeWire/Pulse/MPD runtime visibility.
+The only hard-coded audio rate in the dotfiles so far is the visualizer FIFO path: MPD writes a separate `44100:16:2` FIFO for Cava, and rmpc reads that FIFO as `44100`/`16`. That path is visualizer-only; the actual MPD audio output is the separate `pipewire` output with no explicit format set. Next I’m checking hidden config dirs and the live PipeWire/ALSA view.
+No repo-level PipeWire/WirePlumber quality override exists. The repo’s `44100`/`16` values are only in the MPD-to-Cava FIFO and rmpc’s visualizer input, not the listening output. I’m checking the installed PipeWire defaults now, especially whether allowed sample rates include 96kHz for DAC switching.
+Installed PipeWire has a dormant `10-rates.conf` snippet that would allow `[44100 48000 88200 96000]`, but I don’t see an enabled user/system override for it yet. I’m querying runtime state next; some commands may fail from this sandbox, but the failures themselves will tell us where direct session access is blocked.
+The sandbox cannot connect to the user PipeWire/Pulse session, so I can’t confirm the live default sink from here. I’m falling back to ALSA/procfs hardware visibility, which can still show what the kernel sees for connected audio devices and supported USB audio formats.
+The kernel sees three audio cards: ADAM Audio D3V USB audio, Belkin USB-C Dock audio, and Intel HDA. I’m reading the USB stream descriptors now; those usually expose the real supported sample rates and bit depths.
+The currently connected USB devices do not advertise 24/96: ADAM D3V supports 16-bit at 32/44.1/48kHz, and the Belkin dock supports 16-bit 48kHz. That means today’s `48kHz, 16-bit` is likely the hardware ceiling for the connected output, not just a software cap. I’ll still check current stream state and MPD/decoder behavior.
+MPD has good decoder/output support, including `pipewire`, `soxr`, and `libsamplerate`. I can’t query MPD runtime from the sandbox, but the static config is simple: PipeWire output is unconstrained, FIFO visualizer output is constrained. Now I’m checking the MPD config manual to distinguish harmless visualizer format from any playback resampling knobs we might discuss.
+PipeWire’s manual confirms the important tuning knob for this discussion: `default.clock.allowed-rates` lets the graph switch rates while devices are idle, but it is not enabled by default. MPD’s manual also confirms that omitting `format` on the real output means MPD does not force one format into PipeWire.
+I did not find any enabled PipeWire drop-in under `/etc` or `~/.config/pipewire`; only packaged examples exist under `/usr/share`. So unless runtime metadata was changed manually, PipeWire is probably on its default 48kHz graph with no allowed-rate switching. I’m checking MPD replaygain/mixer defaults next because software volume/replaygain can affect bit-perfect goals.
+No MPD replaygain/mixer settings are present in your config. For a “bit-perfect when possible” direction, that is a discussion point: explicit `mixer_type "none"` and `replay_gain_handler "none"` can prevent MPD-side volume/replaygain changes, but they also remove convenient volume/replaygain behavior.
+**Findings**
+The `44100Hz` values are only on the visualizer path:
+
+- [mpd.conf](/home/cinmay/Documents/dotfiles/omarchy/.config/mpd/mpd.conf:21) sends a separate FIFO output to `/tmp/mpd.fifo` as `44100:16:2`.
+- [config.ron](/home/cinmay/Documents/dotfiles/omarchy/.config/rmpc/config.ron:23) tells rmpc/Cava to read that FIFO as `44100`, `16-bit`, stereo.
+
+That should not limit playback quality. Your real MPD playback output is:
+
+```conf
+audio_output {
+    type "pipewire"
+    name "PipeWire"
+}
+```
+
+No `format` is set there, which is good: MPD is not forcing playback down to 44.1kHz/16-bit.
+
+**Current Hardware**
+From `/proc/asound`:
+
+- `ADAM Audio D3V`: supports `S16_LE`, stereo, `32000/44100/48000`, 16-bit only.
+- `Belkin USB-C Dock`: supports `S16_LE`, `48000`, 16-bit only.
+- Intel HDA is present, but no active stream was open during the check.
+
+So with the devices currently connected, `48kHz, 16-bit` appears to be the hardware ceiling, not just a bad config choice.
+
+**Likely Weak Spot**
+PipeWire appears to be using the default `48kHz` graph. I found the packaged but not enabled snippet:
+
+```conf
+/usr/share/pipewire/pipewire.conf.avail/10-rates.conf
+default.clock.allowed-rates = [ 44100 48000 88200 96000 ]
+```
+
+No enabled override exists in `/etc/pipewire` or `~/.config/pipewire`. That means a 44.1kHz or 96kHz track may be resampled to the 48kHz graph unless PipeWire runtime metadata has been changed elsewhere.
+
+**Discussion Options**
+1. Enable PipeWire allowed-rate switching, probably:
+   `44100 48000 88200 96000 176400 192000`
+   This is the biggest likely quality win for 44.1/48/96/192 material and future DACs.
+
+2. Increase PipeWire resampler quality from default `4` to something like `10` or `14`.
+   Better when resampling is unavoidable, with some CPU cost.
+
+3. Leave MPD playback output format unset.
+   That is already the right choice for best automatic quality.
+
+4. Consider MPD `mixer_type "none"` and `replay_gain_handler "none"` for stricter bit-perfect playback.
+   Tradeoff: rmpc/MPD volume and ReplayGain behavior may become less convenient.
+
+5. Leave the visualizer FIFO at `44100:16:2`.
+   It is not the listening path. Changing it would not improve audio quality, only the visualizer feed.
+
+Time: 2026-07-03 16:06:41
+--- Next Prompt ---
+
+1. What does "allowed-rate switching" mean in PipeWire? 
+2. Yes, I am willing to trade off cpu for better audio quality, go ahead and increase the resampler quality.
+3. Good, we will leave the MPD playback output format unset.
+4. Please elaborate on the tradeoffs of setting `mixer_type "none"` and `replay_gain_handler "none"` in MPD. What exactly would change in terms of user experience, and how would it affect volume control and ReplayGain behavior?
+5. Understood, we will leave the visualizer FIFO at `44100:16:2`.
+
+Time: 2026-07-03 16:15:12
+--- Codex Run ---
+
+Codex output:
+I’ll make the resampler-quality change now and keep the rest as discussion. This is PipeWire user config, so I’m loading the Omarchy guidance first and then I’ll add small drop-ins under the stowed `~/.config/pipewire` path.
+I’m setting PipeWire’s resampler to the maximum documented quality, `14`, for both native PipeWire clients and PulseAudio-compatible clients. That covers MPD’s PipeWire output and browser/YouTube Music-style clients.
+I’m keeping the drop-ins tiny and explicit: one setting, one reason. No rate switching yet, since you asked to discuss that first.
+The resampler drop-ins are added. I’m doing a quick whitespace/status check, then I’ll answer the PipeWire rate-switching and MPD mixer/replaygain tradeoffs in concrete terms.
+**Allowed-Rate Switching**
+PipeWire runs the audio graph at one sample rate at a time, commonly `48kHz`. If a `44.1kHz` track plays into a `48kHz` graph, PipeWire resamples it.
+
+`default.clock.allowed-rates` gives PipeWire a list of rates it may switch to when the graph is idle, for example:
+
+```conf
+default.clock.allowed-rates = [ 44100 48000 88200 96000 176400 192000 ]
+```
+
+So a `44.1kHz` track can run the graph at `44.1kHz`, a `96kHz` track can run it at `96kHz`, etc. It is not a guaranteed per-track instant switch while multiple apps are playing; if YouTube Music, system sounds, and MPD all play at different rates, something still gets resampled.
+
+**Resampler Quality**
+I set PipeWire resampling to max quality `14` for both native PipeWire clients and PulseAudio-compatible clients:
+
+- [client.conf.d/10-resample-quality.conf](/home/cinmay/Documents/dotfiles/omarchy/.config/pipewire/client.conf.d/10-resample-quality.conf:1)
+- [pipewire-pulse.conf.d/10-resample-quality.conf](/home/cinmay/Documents/dotfiles/omarchy/.config/pipewire/pipewire-pulse.conf.d/10-resample-quality.conf:1)
+
+This should improve unavoidable resampling for MPD/PipeWire and browser/Pulse clients. It needs a PipeWire restart after stowing.
+
+```bash
+systemctl --user restart pipewire pipewire-pulse wireplumber
+```
+
+**MPD Mixer Tradeoff**
+`mixer_type "none"` means MPD/rmpc stops controlling volume through MPD.
+
+User experience change:
+- rmpc volume keys/commands may stop working or show no useful MPD volume.
+- System volume/media keys can still control PipeWire output volume.
+- For strict bit-perfect playback, you would keep software/system volume at `100%` and use the DAC/amp’s physical volume.
+
+So this improves purity only if you also avoid PipeWire/software volume scaling.
+
+**ReplayGain Tradeoff**
+`replay_gain_handler "none"` means MPD will not apply ReplayGain loudness normalization.
+
+User experience change:
+- Albums/tracks keep their original mastering loudness.
+- Mixed playlists may jump between quiet and loud tracks.
+- You lose ReplayGain-based clipping/loudness management.
+- If ReplayGain is not enabled in MPD anyway, this may make no practical difference.
+
+My recommendation: next discussion should be whether you want a “bit-perfect mode” with `mixer_type none`, `replay_gain_handler none`, allowed-rate switching, and DAC hardware volume as the expected workflow.
+
+Time: 2026-07-03 16:15:12
+--- Next Prompt ---
+
