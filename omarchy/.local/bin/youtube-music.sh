@@ -70,8 +70,10 @@ ensure_group() {
 
 launch_rmpc() {
   local group_rule="$1"
+  local launcher
 
-  hyprctl dispatch exec "[workspace $music_workspace; group $group_rule] ghostty +new-window --class=$rmpc_class --title=rmpc-music --command=$rmpc_launcher" >/dev/null
+  printf -v launcher "%q" "$rmpc_launcher"
+  hyprctl dispatch exec "[workspace $music_workspace; group $group_rule] bash -lc 'exec uwsm-app -- ghostty --class=$rmpc_class --title=rmpc-music -e $launcher'" >/dev/null
 }
 
 launch_youtube() {
