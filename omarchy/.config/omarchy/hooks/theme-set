@@ -4,4 +4,8 @@ set -euo pipefail
 "$HOME/.local/bin/rmpc-theme-sync.sh" >/dev/null 2>&1 || exit 0
 
 theme_file="${XDG_CACHE_HOME:-$HOME/.cache}/rmpc/theme.ron"
+tmux_file="${XDG_CACHE_HOME:-$HOME/.cache}/rmpc/tmux.conf"
+
 rmpc remote set theme "$theme_file" >/dev/null 2>&1 || true
+tmux -L rmpc-music source-file "$tmux_file" >/dev/null 2>&1 || true
+tmux -L rmpc-music refresh-client -S >/dev/null 2>&1 || true

@@ -17,7 +17,9 @@
     cava: (
         framerate: 60,
         autosens: true,
-        sensitivity: 100,
+        sensitivity: 115,
+        lower_cutoff_freq: 35,
+        higher_cutoff_freq: 18000,
         input: (
             method: Fifo,
             source: "/tmp/mpd.fifo",
@@ -26,11 +28,23 @@
             sample_bits: 16,
         ),
         smoothing: (
-            noise_reduction: 77,
-            monstercat: false,
+            noise_reduction: 64,
+            monstercat: true,
             waves: false,
         ),
         eq: [],
+        bar_symbols: ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'],
+        inverted_bar_symbols: ['█', '▇', '▆', '▅', '▄', '▃', '▂', '▁'],
+        bar_color: [
+            (fg: "#00E5FF"),
+            (fg: "#35F8A7"),
+            (fg: "#FF2BD6"),
+            (fg: "#F9F871"),
+            (fg: "#7C3AED"),
+        ],
+        bar_width: 1,
+        bar_spacing: 0,
+        orientation: Bottom,
     ),
     tabs: [
         (
@@ -56,7 +70,7 @@
                                                 pane: Pane(AlbumArt),
                                             ),
                                             (
-                                                size: "10",
+                                                size: "12",
                                                 borders: "LEFT | RIGHT | BOTTOM",
                                                 border_symbols: Rounded,
                                                 border_title: [(kind: Text(" Visualizer "))],
