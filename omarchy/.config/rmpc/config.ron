@@ -8,10 +8,29 @@
     status_update_interval_ms: 1000,
     album_art: (
         method: Kitty,
+        order: EmbeddedFirst,
         max_size_px: (width: 1400, height: 1400),
-        disabled_protocols: ["http://", "https://"],
+        disabled_protocols: [],
         vertical_align: Center,
         horizontal_align: Center,
+    ),
+    cava: (
+        framerate: 60,
+        autosens: true,
+        sensitivity: 100,
+        input: (
+            method: Fifo,
+            source: "/tmp/mpd.fifo",
+            sample_rate: 44100,
+            channels: 2,
+            sample_bits: 16,
+        ),
+        smoothing: (
+            noise_reduction: 77,
+            monstercat: false,
+            waves: false,
+        ),
+        eq: [],
     ),
     tabs: [
         (

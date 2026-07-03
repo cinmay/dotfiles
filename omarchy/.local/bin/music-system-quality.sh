@@ -15,6 +15,28 @@ format_rate() {
   fi
 }
 
+describe_format() {
+  case "$1" in
+    s16le) printf "16-bit signed PCM" ;;
+    s24le) printf "24-bit signed PCM" ;;
+    s32le) printf "32-bit signed PCM" ;;
+    f32le | float32le) printf "32-bit float PCM" ;;
+    f64le | float64le) printf "64-bit float PCM" ;;
+    u8) printf "8-bit unsigned PCM" ;;
+    *) printf "%s" "$1" ;;
+  esac
+}
+
+describe_channels() {
+  case "$1" in
+    1ch) printf "mono" ;;
+    2ch) printf "stereo" ;;
+    6ch) printf "5.1 surround" ;;
+    8ch) printf "7.1 surround" ;;
+    *) printf "%s" "$1" ;;
+  esac
+}
+
 sink_spec() {
   local default_sink
   default_sink="$(pactl get-default-sink 2>/dev/null || true)"
@@ -33,14 +55,14 @@ sink_spec() {
 spec="$(sink_spec || true)"
 
 if [[ -z "$spec" ]]; then
-  printf "SYS audio unavailable"
+  printf "System audio: unavailable"
   exit 0
 fi
 
 read -r format channels rate _ <<< "$spec"
 
 if [[ -z "${format:-}" || -z "${channels:-}" || -z "${rate:-}" ]]; then
-  printf "SYS %s" "$spec"
+  printf "System audio: %s" "$spec"
 else
-  printf "SYS %s %s %s" "$format" "$channels" "$(format_rate "$rate")"
+  printf "System audio: %s, %s, %s" "$(format_rate "$rate")" "$(describe_channels "$channels")" "$(describe_format "$format")"
 fi

@@ -2,9 +2,9 @@
 #![enable(unwrap_newtypes)]
 #![enable(unwrap_variant_newtypes)]
 (
-    background_color: "#010112",
+    background_color: None,
     text_color: "#FAE4EF",
-    header_background_color: "#010112",
+    header_background_color: None,
     modal_background_color: "#05051C",
     modal_backdrop: true,
     preview_label_style: (fg: "#70A7B2", modifiers: "Bold"),

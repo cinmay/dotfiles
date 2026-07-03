@@ -55,9 +55,9 @@ cat > "$cache_dir/theme.ron" <<EOF
 #![enable(unwrap_newtypes)]
 #![enable(unwrap_variant_newtypes)]
 (
-    background_color: "$background",
+    background_color: None,
     text_color: "$foreground",
-    header_background_color: "$background",
+    header_background_color: None,
     modal_background_color: "$background",
     modal_backdrop: true,
     preview_label_style: (fg: "$primary", modifiers: "Bold"),

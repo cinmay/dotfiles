@@ -459,3 +459,64 @@ Try `super+m` again. Since the file is stowed, this change should already be liv
 Time: 2026-07-03 12:09:41
 --- Next Prompt ---
 
+Now the rmpc window opens correctly when I press `super+m`.
+
+Next let's fix some things. 
+
+The tmux status line is showing `SYS s16le 2ch 48kHz`  Let's make it more human readable. It can be longer without issue.
+Does `SYS` have a purpose? Either remove it or make it more descriptive. I think `s16le` is a formatting error. `48kHz` is fine. `2ch` should perhaps be `stereo`?
+
+The visualizer is not showing working. It's just black.
+
+Your hunch about the album art was correct. It's not showing up in the rmpc window.
+
+See if you can make the background transparent in the rmpc window. The transparency I use for regular Ghostty and tmux is a good setting. 
+
+omarchy/.local/state/mpd/ should be ignored by git
+
+
+Time: 2026-07-03 12:30:53
+--- Codex Run ---
+
+Codex output:
+I’ll use the Omarchy skill again because this touches Ghostty/tmux appearance and the music desktop integration. I’ll handle this in focused pieces: status text, album art backend, visualizer input, rmpc window transparency, and MPD state ignore rules.
+I’m going to make the low-risk UI fixes first, then use rmpc’s real startup path to probe the Cava config schema before changing visualizer input. Album art and visualizer both likely need backend/input changes rather than layout changes.
+For the visualizer, rmpc’s docs confirm it expects MPD to feed Cava through a FIFO. The current MPD config only has the PipeWire output, so I’m adding a separate FIFO output and matching rmpc `cava` config. I’ll also make album art less restrictive by allowing remote art protocols and keeping the Ghostty/Kitty backend.
+I’ll use the Omarchy guidance for this pass since we’re touching desktop-facing config, Ghostty behavior, and repo-managed Omarchy files. I’m going to validate the current edits first, then clean up anything still needed for the MPD state ignore.
+I’ve got the Omarchy guardrails loaded. The likely causes are straightforward: MPD needs a FIFO output for rmpc’s Cava input, album art needs permissive protocol/order settings, and rmpc’s own theme background must stop painting over Ghostty.
+The MPD state directory is already tracked, so adding `.gitignore` alone won’t fully solve that part. I’m going to remove those files from Git’s index only; the files stay on disk, but future MPD runtime churn won’t show up as repo changes.
+There’s one remaining wording issue in the fallback path: it still says `SYS audio unavailable` if PipeWire/PulseAudio can’t be queried. I’m changing that to match the more descriptive label everywhere.
+The Git index is read-only in this sandbox, so I can add the ignore rule but I can’t untrack the already-committed MPD state files from here. I’ll still verify the config and give you the exact non-destructive command to run for the index cleanup.
+The tmux helper now says `System audio: unavailable` when it can’t query the live audio server, and its normal path formats the same data as `System audio: 48kHz, stereo, 16-bit signed PCM`. Next I’m checking whether rmpc and MPD accept the updated config syntax.
+rmpc accepted both the checked-in theme and the generated theme; the only failure is the sandbox blocking the MPD socket. I’m doing one MPD-side check now, because the visualizer depends on MPD actually creating `/tmp/mpd.fifo`.
+The ignore pattern matches, but those MPD files are still tracked by Git, which is why `log` and `state` still appear as modified. Since this sandbox can’t write `.git/index`, I can’t finish that one operation here, but the repo file change is in place.
+Implemented the fixes in the dotfiles.
+
+Changed:
+- Tmux status now formats audio as `System audio: 48kHz, stereo, 16-bit signed PCM`.
+- Added MPD FIFO output for the rmpc visualizer in [mpd.conf](/home/cinmay/Documents/dotfiles/omarchy/.config/mpd/mpd.conf:21).
+- Configured rmpc Cava to read `/tmp/mpd.fifo` in [config.ron](/home/cinmay/Documents/dotfiles/omarchy/.config/rmpc/config.ron:17).
+- Made rmpc background/header transparent in [theme.ron](/home/cinmay/Documents/dotfiles/omarchy/.config/rmpc/theme.ron:5) and the generated theme.
+- Relaxed album-art protocol blocking and prefers embedded art first.
+- Added `.gitignore` for `omarchy/.local/state/mpd/`.
+
+Validated:
+- `bash -n` passed for the helper scripts.
+- `rmpc --config ... --theme ...` accepts both the checked-in and generated themes; it only failed at MPD connection because the sandbox blocks that socket.
+- `mpd` accepted the config far enough to fail on sandbox socket binding, not config parsing.
+- `git diff --check` passed for the touched tracked files.
+
+Two local follow-ups:
+```bash
+git rm --cached -r omarchy/.local/state/mpd
+systemctl --user restart mpd
+```
+
+The first one is non-destructive; it only stops Git tracking MPD runtime files. The second is needed so MPD creates `/tmp/mpd.fifo`, which should make the visualizer start moving during playback.
+
+Time: 2026-07-03 12:30:53
+--- Next Prompt ---
+
+Tmux looks good now. What does the `signed` stand for? 
+The visualizer works. 
+
