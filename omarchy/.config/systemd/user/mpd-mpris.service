@@ -1,0 +1,10 @@
+[Unit]
+Description=MPRIS bridge for MPD
+
+[Service]
+ExecStart=/usr/bin/mpd-mpris -no-instance
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

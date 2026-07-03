@@ -519,4 +519,66 @@ Time: 2026-07-03 12:30:53
 
 Tmux looks good now. What does the `signed` stand for? 
 The visualizer works. 
+Transparency works.
+Git ignore works.
+Album art works.
+
+Now YouTube Music is not opening in the group. It opens in a new window instead.
+The media keys are not controlling mpd. 
+
+Time: 2026-07-03 13:57:16
+--- Codex Run ---
+
+Codex output:
+I’ll use the Omarchy instructions again because this touches Hyprland window behavior and media-key bindings. “Signed” means the PCM sample values can be positive or negative around zero; `s16le` is 16-bit signed little-endian PCM.
+I’m going to inspect the Super+M launcher and the media-key bindings next. The grouping bug is probably in the launch order/group dispatch, while the media keys are likely still using whatever Omarchy’s default player-control command is.
+The music launcher is still relying on Hyprland’s `group invade` rule for YouTube Music, and that looks brittle for a webapp that may map its window after the dispatch has already finished. I’m checking the default media-key source too, since your local bindings include Omarchy’s stock media config.
+For the media keys, Omarchy’s default binding calls `swayosd-client --playerctl ...`, which delegates to MPRIS via `playerctl`. Installing `mpd-mpris` is only half of that path; something still has to start the `mpd-mpris` process so MPD appears as a controllable player.
+There’s no local Hyprland autostart file in the repo right now, so nothing here starts `mpd-mpris`. I’m going to keep this small: add a user override autostart that launches `mpd-mpris`, then make the Super+M grouping script wait for YouTube’s real window and actively move it into the group instead of trusting the exec-time rule.
+The launcher will now stop depending on PID-based exec rules for grouping. Hyprland’s docs call out that exec rules can fail when an app forks before mapping its window, which is exactly the sort of behavior Chromium/webapp launchers often have.
+I’m adding one small user autostart file and a systemd user unit for `mpd-mpris`. The autostart starts the unit on Hyprland login; the unit gives the bridge a proper restart policy instead of leaving it as a loose background process.
+I’m patching the launcher so the existing window becomes the group anchor, the missing window is waited for, and then the missing window is moved into that group explicitly. That preserves your “keep focus on the window that already existed” rule.
+The first patch missed because I tried to change too much context at once. I’m splitting it into smaller edits so the launcher change stays easy to review.
+The helper functions are in place now: one creates/unlocks the group anchor, one moves a specific window into the nearby group, and one locks the finished group again. I’m updating the Super+M branches to use those helpers.
+Now I’m adding the MPRIS bridge startup. This should make MPD visible to the existing Omarchy media-key path through `playerctl`, instead of replacing the media-key behavior with MPD-only bindings.
+The code changes are in. I’m validating syntax and doing the Hyprland/systemd checks that can run from this sandbox; live Hyprland reload may still be blocked because this environment can’t reach the compositor socket.
+One more case matters: if the old bad state already exists with both windows open but not grouped, Super+M should repair it instead of just switching to the music workspace. I’m adding that repair path now.
+The repair path is in place. I’m running syntax and whitespace checks now, then I’ll summarize what needs to be reloaded or started in the live session.
+The static checks passed. Live Hyprland reload and systemd unit verification are blocked by sandbox permissions here, not by the config itself, so I’m checking the final file list and exact commands for you to run in-session.
+“Signed” means the PCM samples are stored as numbers that can go below and above zero. So `s16le` = 16-bit signed little-endian PCM.
+
+I changed the Super+M launcher so it no longer relies on Hyprland exec-time group rules for YouTube Music. Current Hyprland docs note exec rules track the spawned PID and can fail when an app forks before opening its window, which fits the webapp behavior. The script now waits for the real window, creates/unlocks the group anchor, moves the missing window into the group, then locks the group again.
+
+I also added `mpd-mpris` startup:
+- [autostart.conf](/home/cinmay/Documents/dotfiles/omarchy/.config/hypr/autostart.conf:1)
+- [mpd-mpris.service](/home/cinmay/Documents/dotfiles/omarchy/.config/systemd/user/mpd-mpris.service:1)
+
+Validation:
+- `bash -n` passed for `youtube-music.sh`.
+- `git diff --check` passed for touched files.
+- Live `hyprctl reload/configerrors` and `systemd-analyze --user verify` were blocked by sandbox socket permissions.
+
+To apply the media-key fix immediately after stowing:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now mpd-mpris.service
+```
+
+For the grouping fix, press `super+m` once with both music windows open; it should also repair the existing ungrouped state. Source checked: [Hyprland dispatchers](https://wiki.hypr.land/Configuring/Dispatchers/).
+
+text
+2026-07-03T11:55:05.248369Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /home/cinmay/Documents/dotfiles/omarchy/.local/bin/youtube-music.sh:
+ensure_group() {
+  local address="$1"
+
+  focus_window "$address"
+  if ! is_grouped "$address"; then
+    hyprctl dispatch togglegroup >/dev/null || true
+  fi
+  hyprctl dispatch lockactivegroup lock >/dev/null || true
+}
+
+Time: 2026-07-03 13:57:16
+--- Next Prompt ---
 
