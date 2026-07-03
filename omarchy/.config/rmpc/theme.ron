@@ -1,0 +1,42 @@
+#![enable(implicit_some)]
+#![enable(unwrap_newtypes)]
+#![enable(unwrap_variant_newtypes)]
+(
+    background_color: "#010112",
+    text_color: "#FAE4EF",
+    header_background_color: "#010112",
+    modal_background_color: "#05051C",
+    modal_backdrop: true,
+    preview_label_style: (fg: "#70A7B2", modifiers: "Bold"),
+    preview_metadata_group_style: (fg: "#BC92C0", modifiers: "Bold"),
+    highlighted_item_style: (fg: "#70A7B2", modifiers: "Bold"),
+    current_item_style: (fg: "#010112", bg: "#BC92C0", modifiers: "Bold"),
+    borders_style: (fg: "#70A7B2"),
+    highlight_border_style: (fg: "#BC92C0", modifiers: "Bold"),
+    progress_bar: (
+        elapsed_style: (fg: "#70A7B2"),
+        thumb_style: (fg: "#BC92C0"),
+    ),
+    scrollbar: (
+        thumb_style: (fg: "#70A7B2"),
+    ),
+    tab_bar: (
+        active_style: (fg: "#010112", bg: "#70A7B2", modifiers: "Bold"),
+        inactive_style: (fg: "#FAE4EF"),
+    ),
+    level_styles: (
+        info: (fg: "#70A7B2", bg: "#010112"),
+        warn: (fg: "#A78D56", bg: "#010112"),
+        error: (fg: "#C28D8F", bg: "#010112"),
+        debug: (fg: "#57977A", bg: "#010112"),
+        trace: (fg: "#BC92C0", bg: "#010112"),
+    ),
+    cava: (
+        bar_symbols: ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"],
+        inverted_bar_symbols: ["▔", "▔", "▔", "▀", "▀", "▀", "▀", "█"],
+        bar_color: (fg: "#70A7B2"),
+        bar_spacing: 1,
+        bar_width: 1,
+        orientation: Bottom,
+    ),
+)

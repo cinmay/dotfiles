@@ -1,0 +1,168 @@
+#![enable(implicit_some)]
+#![enable(unwrap_newtypes)]
+#![enable(unwrap_variant_newtypes)]
+(
+    address: "127.0.0.1:6600",
+    theme: Some("/home/cinmay/.cache/rmpc/theme.ron"),
+    max_fps: 60,
+    status_update_interval_ms: 1000,
+    album_art: (
+        method: Kitty,
+        max_size_px: (width: 1400, height: 1400),
+        disabled_protocols: ["http://", "https://"],
+        vertical_align: Center,
+        horizontal_align: Center,
+    ),
+    tabs: [
+        (
+            name: "Queue",
+            pane: Split(
+                direction: Vertical,
+                panes: [
+                    (
+                        size: "100%",
+                        pane: Split(
+                            direction: Horizontal,
+                            panes: [
+                                (
+                                    size: "38%",
+                                    pane: Split(
+                                        direction: Vertical,
+                                        panes: [
+                                            (
+                                                size: "100%",
+                                                borders: "ALL",
+                                                border_symbols: Rounded,
+                                                border_title: [(kind: Text(" Album Art "))],
+                                                pane: Pane(AlbumArt),
+                                            ),
+                                            (
+                                                size: "10",
+                                                borders: "LEFT | RIGHT | BOTTOM",
+                                                border_symbols: Rounded,
+                                                border_title: [(kind: Text(" Visualizer "))],
+                                                pane: Pane(Cava),
+                                            ),
+                                            (
+                                                size: "4",
+                                                borders: "LEFT | RIGHT | BOTTOM",
+                                                border_symbols: Rounded,
+                                                border_title: [(kind: Text(" Track Quality "))],
+                                                pane: Pane(Property(
+                                                    content: [
+                                                        (kind: Text("TRACK ")),
+                                                        (kind: Property(Status(Bitrate)), default: (kind: Text("--"))),
+                                                        (kind: Text(" kbps  ")),
+                                                        (kind: Property(Status(SampleRate())), default: (kind: Text("--"))),
+                                                        (kind: Text(" Hz  ")),
+                                                        (kind: Property(Status(Bits())), default: (kind: Text("--"))),
+                                                        (kind: Text(" bit  ")),
+                                                        (kind: Property(Status(Channels())), default: (kind: Text("--"))),
+                                                        (kind: Text(" ch")),
+                                                    ],
+                                                    align: Center,
+                                                )),
+                                            ),
+                                        ],
+                                    ),
+                                ),
+                                (
+                                    size: "62%",
+                                    pane: Split(
+                                        direction: Vertical,
+                                        panes: [
+                                            (
+                                                size: "3",
+                                                borders: "ALL",
+                                                border_symbols: Rounded,
+                                                pane: Pane(QueueHeader()),
+                                            ),
+                                            (
+                                                size: "100%",
+                                                borders: "LEFT | RIGHT | BOTTOM",
+                                                border_symbols: Rounded,
+                                                pane: Pane(Queue),
+                                            ),
+                                        ],
+                                    ),
+                                ),
+                            ],
+                        ),
+                    ),
+                    (
+                        size: "3",
+                        borders: "ALL",
+                        border_symbols: Rounded,
+                        border_title: [(kind: Text(" Keys "))],
+                        pane: Pane(Property(
+                            content: [
+                                (kind: Text("? help  |  j/k move  |  enter play/open  |  / search  |  a add  |  d delete  |  p pause  |  < > track  |  , . volume")),
+                            ],
+                            align: Center,
+                        )),
+                    ),
+                ],
+            ),
+        ),
+        (
+            name: "Directories",
+            borders: "ALL",
+            border_symbols: Rounded,
+            pane: Split(
+                size: "100%",
+                direction: Vertical,
+                panes: [(pane: Pane(Directories), size: "100%", borders: "ALL", border_symbols: Rounded)],
+            ),
+        ),
+        (
+            name: "Artists",
+            borders: "ALL",
+            border_symbols: Rounded,
+            pane: Split(
+                size: "100%",
+                direction: Vertical,
+                panes: [(pane: Pane(Artists), size: "100%", borders: "ALL", border_symbols: Rounded)],
+            ),
+        ),
+        (
+            name: "Album Artists",
+            borders: "ALL",
+            border_symbols: Rounded,
+            pane: Split(
+                size: "100%",
+                direction: Vertical,
+                panes: [(pane: Pane(AlbumArtists), size: "100%", borders: "ALL", border_symbols: Rounded)],
+            ),
+        ),
+        (
+            name: "Albums",
+            borders: "ALL",
+            border_symbols: Rounded,
+            pane: Split(
+                size: "100%",
+                direction: Vertical,
+                panes: [(pane: Pane(Albums), size: "100%", borders: "ALL", border_symbols: Rounded)],
+            ),
+        ),
+        (
+            name: "Playlists",
+            borders: "ALL",
+            border_symbols: Rounded,
+            pane: Split(
+                size: "100%",
+                direction: Vertical,
+                panes: [(pane: Pane(Playlists), size: "100%", borders: "ALL", border_symbols: Rounded)],
+            ),
+        ),
+        (
+            name: "Search",
+            borders: "ALL",
+            border_symbols: Rounded,
+            pane: Split(
+                size: "100%",
+                direction: Vertical,
+                panes: [(pane: Pane(Search), size: "100%", borders: "ALL", border_symbols: Rounded)],
+            ),
+        ),
+    ],
+)

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+"$HOME/.local/bin/rmpc-theme-sync.sh" >/dev/null 2>&1 || exit 0
+
+theme_file="${XDG_CACHE_HOME:-$HOME/.cache}/rmpc/theme.ron"
+rmpc remote set theme "$theme_file" >/dev/null 2>&1 || true
