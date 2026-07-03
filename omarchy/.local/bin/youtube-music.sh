@@ -121,11 +121,10 @@ fi
 if [[ -z "$rmpc_window" && -z "$youtube_window" ]]; then
   workspace_music
   launch_rmpc "new lock"
-  rmpc_window="$(wait_for_rmpc || true)"
-  [[ -n "$rmpc_window" ]] && focus_window "$(address_from "$rmpc_window")"
-
+  sleep 0.2
   launch_youtube "invade"
-  wait_for_youtube >/dev/null || true
+
+  rmpc_window="$(wait_for_rmpc || true)"
   [[ -n "$rmpc_window" ]] && focus_window "$(address_from "$rmpc_window")"
   exit 0
 fi
@@ -135,7 +134,7 @@ if [[ -n "$rmpc_window" ]]; then
   workspace_music
   ensure_group "$rmpc_address"
   launch_youtube "invade"
-  wait_for_youtube >/dev/null || true
+  sleep 0.5
   focus_window "$rmpc_address"
   exit 0
 fi
@@ -144,5 +143,5 @@ youtube_address="$(address_from "$youtube_window")"
 workspace_music
 ensure_group "$youtube_address"
 launch_rmpc "invade"
-wait_for_rmpc >/dev/null || true
+sleep 0.5
 focus_window "$youtube_address"

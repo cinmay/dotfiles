@@ -3,7 +3,7 @@
 #![enable(unwrap_variant_newtypes)]
 (
     address: "127.0.0.1:6600",
-    theme: Some("/home/cinmay/.cache/rmpc/theme.ron"),
+    theme: Some("/home/cinmay/.config/rmpc/theme.ron"),
     max_fps: 60,
     status_update_interval_ms: 1000,
     album_art: (
