@@ -776,3 +776,53 @@ My recommendation: next discussion should be whether you want a “bit-perfect m
 Time: 2026-07-03 16:15:12
 --- Next Prompt ---
 
+It sounds good for now. 
+Let's move on, are there shortcuts for the tabs? Queue, Albums, Artists, etc. in rmpc?
+
+Time: 2026-07-03 16:31:40
+--- Codex Run ---
+
+Codex output:
+Yes. rmpc’s default tab shortcuts should work with our tab names:
+
+- `1` Queue
+- `2` Directories
+- `3` Artists
+- `4` Album Artists
+- `5` Albums
+- `6` Playlists
+- `7` Search
+- `Tab` / `gt` next tab
+- `Shift+Tab` / `gT` previous tab
+
+The footer hint currently does not show those. We should probably add `1-7 tabs` to the key-hints panel so it matches your “don’t make me memorize shortcuts” requirement.
+
+Time: 2026-07-03 16:31:40
+--- Next Prompt ---
+
+Can you add the hit to the tabs so it's easier to immediately see the shortcuts for the tabs?
+
+Time: 2026-07-03 16:33:50
+--- Codex Run ---
+
+Codex output:
+I’ll add this in the always-visible key hint strip rather than renaming the tab labels, because rmpc’s numeric shortcuts target tab names internally and renaming tabs could accidentally break them.
+I found the safe place to put the hint: the existing bottom “Keys” panel. I’m updating that visible text only, then I’ll validate rmpc can still parse the config.
+I’m making the hint two lines so the tab shortcuts are readable instead of cramming everything into one long strip. The key panel gets one extra row to make room.
+The hint is patched. I’m running the rmpc parse check now to make sure the newline and panel size are accepted.
+Added the tab shortcut hint to the visible `Keys` panel in [config.ron](/home/cinmay/Documents/dotfiles/omarchy/.config/rmpc/config.ron:126).
+
+It now shows:
+
+```text
+1 Queue  2 Dirs  3 Artists  4 Album Artists  5 Albums  6 Playlists  7 Search
+? help  |  tab/gt next  |  j/k move  |  enter play/open  |  / search  |  p pause  |  < > track  |  , . volume
+```
+
+Validation passed: rmpc accepted the config; it only failed at MPD connection due sandbox permissions.
+
+Time: 2026-07-03 16:33:50
+--- Next Prompt ---
+
+
+

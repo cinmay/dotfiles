@@ -123,13 +123,13 @@
                         ),
                     ),
                     (
-                        size: "3",
+                        size: "4",
                         borders: "ALL",
                         border_symbols: Rounded,
                         border_title: [(kind: Text(" Keys "))],
                         pane: Pane(Property(
                             content: [
-                                (kind: Text("? help  |  j/k move  |  enter play/open  |  / search  |  a add  |  d delete  |  p pause  |  < > track  |  , . volume")),
+                                (kind: Text("1 Queue  2 Dirs  3 Artists  4 Album Artists  5 Albums  6 Playlists  7 Search\n? help  |  tab/gt next  |  j/k move  |  enter play/open  |  / search  |  p pause  |  < > track  |  , . volume")),
                             ],
                             align: Center,
                         )),
