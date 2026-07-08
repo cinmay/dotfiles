@@ -824,5 +824,55 @@ Validation passed: rmpc accepted the config; it only failed at MPD connection du
 Time: 2026-07-03 16:33:50
 --- Next Prompt ---
 
+The media keys didn't work after repoot. I have to do:
 
+```bash
+systemctl --user start mpd-mpris.service
+```
+How can we make sure that the `mpd-mpris.service` starts automatically on boot? 
+
+
+
+Time: 2026-07-08 13:24:44
+--- Codex Run ---
+
+Codex output:
+I’ll check the current unit/autostart files and make this deterministic. The reliable systemd way is to enable the user unit under `default.target`; Hyprland autostart is only a session-level fallback.
+The unit already has an `[Install]` section, so the missing piece is likely that it was started manually but never enabled, or the enable symlink is not present in the dotfiles. I’m checking the repo and live user-systemd view now.
+I’m going to track the enablement symlink in the dotfiles: `default.target.wants/mpd-mpris.service -> ../mpd-mpris.service`. That mirrors what `systemctl --user enable` creates, so stowing the repo provisions autostart instead of relying on Hyprland session startup.
+One more reliability issue: if `mpd-mpris` starts before MPD is ready, it can fail and systemd may eventually stop retrying. I’m checking for an MPD user unit and then I’ll make the bridge tolerant of MPD coming up late.
+There is a packaged `/usr/lib/systemd/user/mpd-mpris.service`, but your dotfiles also define a user override unit. The enable symlink is now tracked in the repo. I’m going to add ordering/retry behavior to the dotfile unit so it starts after MPD and keeps retrying instead of giving up during boot races.
+The packaged unit is better than our first draft because it declares the D-Bus name. I’m updating the dotfile unit to keep the useful package behavior, add a soft dependency on MPD, and prevent boot-time retry throttling.
+The unit and enable symlink are now in the repo. I’m running what validation is possible from the sandbox and checking the final diff.
+To make a user service start automatically, it needs to be enabled under the user manager’s `default.target`. Starting it manually only runs it for the current session.
+
+I added the enablement symlink to the dotfiles:
+
+[default.target.wants/mpd-mpris.service](/home/cinmay/Documents/dotfiles/omarchy/.config/systemd/user/default.target.wants/mpd-mpris.service)
+
+It points to:
+
+[mpd-mpris.service](/home/cinmay/Documents/dotfiles/omarchy/.config/systemd/user/mpd-mpris.service)
+
+I also tightened the unit so it starts after MPD, softly pulls MPD in with `Wants=mpd.service`, owns the expected MPRIS D-Bus name, and keeps retrying instead of hitting systemd start-limit throttling during boot races.
+
+Run once after stowing:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now mpd-mpris.service
+```
+
+Then verify:
+
+```bash
+systemctl --user is-enabled mpd-mpris.service
+systemctl --user status mpd-mpris.service
+playerctl --list-all
+```
+
+For a user service, “on boot” really means “when your user systemd manager starts,” which is normally at login. That is the right behavior for media keys in the desktop session.
+
+Time: 2026-07-08 13:24:44
+--- Next Prompt ---
 

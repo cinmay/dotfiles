@@ -1,8 +1,13 @@
 [Unit]
-Description=MPRIS bridge for MPD
+Description=mpd-mpris: An implementation of the MPRIS protocol for MPD
+Wants=mpd.service
+After=mpd.service
+StartLimitIntervalSec=0
 
 [Service]
 ExecStart=/usr/bin/mpd-mpris -no-instance
+Type=dbus
+BusName=org.mpris.MediaPlayer2.mpd
 Restart=on-failure
 RestartSec=2
 
