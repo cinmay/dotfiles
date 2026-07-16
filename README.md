@@ -111,7 +111,7 @@ run :Verbose map <the keybinding> e.g. :Verbose map <leader>g
 Dependencies on Arch:
 
 ```bash
-sudo pacman -S mpv socat
+sudo pacman -S mpv socat mpc
 ```
 
 Start Kokoro-FastAPI with Podman:
@@ -154,6 +154,10 @@ visual gs   speak selection
 
 Playback volume is configured in `require("local_tts").setup()` with `volume`
 and `volume_max`.
+
+Starting TTS pauses MPD playback without resuming it afterward. The hardware
+Play/Pause media keys toggle active TTS playback first, then fall back to the
+normal Omarchy/playerctl media behavior when TTS is not running.
 
 ## Rider keybindings
 

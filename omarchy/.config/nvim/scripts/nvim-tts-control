@@ -2,7 +2,9 @@
 import argparse
 import json
 import os
+import shutil
 import socket
+import subprocess
 import sys
 
 
@@ -16,7 +18,7 @@ def env_value(name, default):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Control Neovim TTS mpv playback.")
-    parser.add_argument("command", choices=["pause", "resume", "toggle", "stop", "status"])
+    parser.add_argument("command", choices=["pause", "resume", "toggle", "stop", "status", "media-toggle"])
     parser.add_argument("--tmp-dir", default=env_value("NVIM_TTS_TMP_DIR", DEFAULT_TMP_DIR))
     return parser.parse_args()
 
@@ -69,27 +71,64 @@ def missing_socket(command):
     return 1
 
 
-def status(sock_path):
+def playback_state(sock_path):
     if not os.path.exists(sock_path):
-        print("TTS playback: not running")
-        return 0
+        return None
 
     try:
         response = send_command(sock_path, ["get_property", "pause"])
     except (FileNotFoundError, ConnectionRefusedError, OSError, json.JSONDecodeError):
+        return None
+
+    if response.get("error") not in (None, "success"):
+        return "running"
+
+    if response.get("data") is True:
+        return "paused"
+
+    return "playing"
+
+
+def status(sock_path):
+    state = playback_state(sock_path)
+    if state is None:
         print("TTS playback: not running")
         return 0
 
-    if response.get("error") not in (None, "success"):
-        print("TTS playback: running")
+    print(f"TTS playback: {state}")
+    return 0
+
+
+def fallback_media_toggle():
+    swayosd_client = shutil.which("omarchy-swayosd-client")
+    if swayosd_client is not None:
+        command = [swayosd_client, "--playerctl", "play-pause"]
+    else:
+        playerctl = shutil.which("playerctl")
+        if playerctl is None:
+            print("No active TTS playback and playerctl is not installed", file=sys.stderr)
+            return 1
+
+        command = [playerctl, "play-pause"]
+
+    try:
+        return subprocess.run(command, check=False).returncode
+    except OSError as error:
+        print(f"Media fallback failed: {error}", file=sys.stderr)
+        return 1
+
+
+def media_toggle(sock_path):
+    if playback_state(sock_path) is not None:
+        try:
+            send_command(sock_path, mpv_command("toggle"))
+        except (FileNotFoundError, ConnectionRefusedError, OSError, json.JSONDecodeError):
+            return fallback_media_toggle()
+
+        print("TTS playback pause toggled")
         return 0
 
-    if response.get("data") is True:
-        print("TTS playback: paused")
-    else:
-        print("TTS playback: playing")
-
-    return 0
+    return fallback_media_toggle()
 
 
 def main():
@@ -98,6 +137,9 @@ def main():
 
     if args.command == "status":
         return status(sock_path)
+
+    if args.command == "media-toggle":
+        return media_toggle(sock_path)
 
     if not os.path.exists(sock_path):
         return missing_socket(args.command)
