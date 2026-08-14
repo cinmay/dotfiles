@@ -236,10 +236,30 @@ vim.keymap.set("n", "<C-k>", "<C-w><C-k>", { desc = "Move focus to the upper win
 -- Toggles
 vim.keymap.set("n", "<leader>ta", ":ASToggle<CR>", { desc = "toggle auto save" })
 
-vim.keymap.set("n", "<leader>th", function()
-	vim.o.hlsearch = not vim.o.hlsearch
-	print("Highlight search: " .. (vim.o.hlsearch and "on" or "off"))
-end, { desc = "toggle highlight search" })
+-- Codex thread workflow
+require("custom.codex").setup()
+
+require("local_tts").setup({
+	endpoint = "http://127.0.0.1:8880/v1/audio/speech",
+	model = "kokoro",
+	voice = "af_heart",
+	response_format = "mp3",
+	tmp_dir = "/tmp/nvim-tts",
+	max_chars = 12000,
+	volume = 180,
+	volume_max = 200,
+	mappings = {
+		operator = "gs",
+		line = "gss",
+		visual = "gs",
+		pause_toggle = "<leader>rp",
+	},
+})
+
+-- vim.keymap.set("n", "<leader>th", function()
+-- 	vim.o.hlsearch = not vim.o.hlsearch
+-- 	print("Highlight search: " .. (vim.o.hlsearch and "on" or "off"))
+-- end, { desc = "toggle highlight search" })
 
 -- Toggle split window :vs
 vim.keymap.set("n", "<leader>ts", ":vsplit<CR>", { desc = "Toggle vertical split" })
@@ -262,7 +282,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not (vim.uv or vim.loop).fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
 	local lazyrepo = "https://github.com/folke/lazy.nvim.git"
 	local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
 	if vim.v.shell_error ~= 0 then
@@ -402,6 +422,47 @@ require("lazy").setup({
 				{ "<leader>s", group = "[S]earch" },
 				{ "<leader>t", group = "[T]oggle" },
 				{ "<leader>h", group = "Git [H]unk", mode = { "n", "v" } },
+			},
+		},
+	},
+
+	{ -- Cmdline + messages + LSP progress UI
+		"folke/noice.nvim",
+		event = "VeryLazy",
+		dependencies = {
+			"MunifTanjim/nui.nvim",
+			{
+				"rcarriga/nvim-notify",
+				opts = {
+					timeout = 3000,
+					background_colour = "#000000",
+				},
+				config = function(_, opts)
+					require("notify").setup(opts)
+					vim.notify = require("notify")
+				end,
+			},
+			{ "stevearc/dressing.nvim", opts = {} },
+		},
+		opts = {
+			lsp = {
+				progress = { enabled = true },
+			},
+			presets = {
+				command_palette = true,
+				long_message_to_split = true,
+			},
+			views = {
+				cmdline_popup = {
+					position = {
+						row = "40%",
+						col = "50%",
+					},
+					size = {
+						width = 60,
+						height = "auto",
+					},
+				},
 			},
 		},
 	},
@@ -696,11 +757,6 @@ require("lazy").setup({
 		end,
 	},
 	--
-	{
-		"catppuccin/nvim",
-		name = "catppuccin",
-		priority = 1000,
-	},
 	-- Highlight todo, notes, etc in comments
 	{
 		"folke/todo-comments.nvim",
@@ -748,11 +804,10 @@ require("lazy").setup({
 	},
 	{ -- Highlight, edit, and navigate code
 		"nvim-treesitter/nvim-treesitter",
-		build = ":TSUpdate",
-		main = "nvim-treesitter.configs", -- Sets main module to use for opts
-		-- [[ Configure Treesitter ]] See `:help nvim-treesitter`
-		opts = {
-			ensure_installed = {
+		lazy = false,
+		branch = "main",
+		build = function()
+			local parsers = {
 				"bash",
 				"c",
 				"diff",
@@ -765,26 +820,41 @@ require("lazy").setup({
 				"markdown_inline",
 				"templ",
 				"tsx",
-				-- "typescript-language-server",
+				"typescript",
 				"query",
 				"vim",
 				"vimdoc",
-			},
-			-- Autoinstall languages that are not installed
-			auto_install = true,
-			highlight = {
-				enable = true,
-				-- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
-				--  If you are experiencing weird indenting issues, add the language to
-				--  the list of additional_vim_regex_highlighting and disabled languages for indent.
-				additional_vim_regex_highlighting = { "ruby" },
-			},
-			indent = { enable = true, disable = { "ruby" } },
-		},
+			}
+
+			local treesitter = require("nvim-treesitter")
+			treesitter.install(parsers):wait(300000)
+			treesitter.update(parsers):wait(300000)
+		end,
+		-- [[ Configure Treesitter ]] See `:help nvim-treesitter-intro`
+		config = function()
+			vim.api.nvim_create_autocmd("FileType", {
+				group = vim.api.nvim_create_augroup("kickstart-treesitter", { clear = true }),
+				callback = function(args)
+					local language = vim.treesitter.language.get_lang(args.match)
+					if not language then
+						return
+					end
+
+					if not pcall(vim.treesitter.start, args.buf, language) then
+						return
+					end
+
+					local ok, query = pcall(vim.treesitter.query.get, language, "indents")
+					if ok and query then
+						vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+					end
+				end,
+			})
+		end,
 		-- There are additional nvim-treesitter modules that you can use to interact
 		-- with nvim-treesitter. You should go explore a few and see what interests you:
 		--
-		--    - Incremental selection: Included, see `:help nvim-treesitter-incremental-selection-mod`
+		--    - Incremental selection: Built into Nvim, see `:help treesitter-incremental-selection`
 		--    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
 		--    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
 	},
@@ -810,6 +880,7 @@ require("lazy").setup({
 	--
 	--  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
 	{ import = "custom.plugins" },
+	{ import = "plugins" },
 	--
 	-- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
 	-- Or use telescope!

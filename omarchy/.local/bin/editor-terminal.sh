@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Always jump to the editor workspace (10); focus an existing terminal there or launch one.
+# Always jump to editor workspace (10); focus existing terminal there or launch one on that workspace.
 
 set -euo pipefail
 WS=10
@@ -15,9 +15,7 @@ FOUND="$(
         .[]
         | select(.workspace.id == $ws)
         | select(
-            # match by class (preferred)
             ((.class // "") | test($re; "i"))
-            # or fallback: a terminal tag, if present
             or ((.tags // []) | any(. == "terminal*"))
           )
         | .address
@@ -30,6 +28,7 @@ if [ -n "$FOUND" ]; then
   exit 0
 fi
 
-# 3) No terminal on WS 10 → open one here
-cd "$(omarchy-cmd-terminal-cwd 2>/dev/null || echo "$HOME")"
-exec uwsm app -- "${TERMINAL:-alacritty}"
+# 3) No terminal on WS 10 → ask Hyprland to launch it on the *current* workspace
+CWD="$(omarchy-cmd-terminal-cwd 2>/dev/null || echo "$HOME")"
+# Use hyprctl exec so the window opens on WS 10, not the previous workspace
+hyprctl dispatch exec "bash -lc 'cd \"${CWD}\"; exec uwsm app -- \"${TERMINAL:-alacritty}\"'"

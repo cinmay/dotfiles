@@ -1,23 +1,32 @@
 # ToDo Kanban
 
+## Why
+Why: The purpose of my setup is to reinforce my pursuit of personal excellence in professional software development.
+
+## Philosophy & Guiding Principles
+This setup is a deliberate professional workspace for focus and personal excellence. Everything is intentional: every tool exists for a reason, every screen element earns its place, and anything that distracts or dilutes the work is removed. The environment is built for single-tasking, with one monitor, keyboard-first navigation, and one workspace per task so attention stays on the work. I prefer hard-mode learning because mastery matters more than convenience, and a bespoke Neovim workflow forces me to understand my tools deeply. The system is designed so everything has a hotkey and a clear purpose, reinforcing discipline, flow, and craftsmanship.
+
+Docs: [Codex thread workflow](nvim/lua/custom/codex/README.md)
+
+
 | Backlog                   | Preperation | Wip | Final inspection | Done                           |
 | ------------------------- | ----------- | --- | ---------------- | ------------------------------ |
 | Tesing                    |             |     |                  | Spellchecking                  |
 | Breakpoints               |             |     |                  | Relative line numbers          |
 | Telescope resume          |             |     |                  | Telerscope ignore node_modules |
-| LasyGit                   |             |     |                  | Tmux                           |
-| Multi clipboard           |             |     |                  | Harpoon                        |
-| Emojis                    |             |     |                  | Copilot                        |
+| Install Neotest           |             |     |                  | Tmux                           |
+| |             |     |                  | Harpoon                        |
+| |             |     |                  | Copilot                        |
 | Show Package size         |             |     |                  | Autosave                       |
 | Show types, uses etc      |             |     |                  | Printable Keyboard shortcuts   |
 | Add telescope help text   |             |     |                  | Autoformatting                 |
-| Install trouble? or not   |             |     |                  | 80 line ruler                  |
-| TTS better voice          |             |     |                  | Center window                  |
-| Fix, Harpoon autosave     |             |     |                  | Pretier                        |
+| |             |     |                  | 80 line ruler                  |
+|  |             |     |                  | Center window                  |
+| |             |     |                  | Pretier                        |
 | telekasten.nvim           |             |     |                  | Typescript                     |
 | Obsidian note integration |             |     |                  | Linter                         |
-| Find new wallpaper        |             |     |                  | Kanban                         |
-| Install Neotest           |             |     |                  | Prettier                       |
+| |             |     |                  | Kanban                         |
+| |             |     |                  | Prettier                       |
 |                           |             |     |                  | Prettier add html, css, yaml   |
 |                           |             |     |                  | Zoom in and out                |
 |                           |             |     |                  | VimBeGood                      |
@@ -37,13 +46,16 @@
 |                           |             |     |                  | Nerd Font                      |
 |                           |             |     |                  | Markdown preview               |
 |                           |             |     |                  | Add dependencies reademe       |
+|                           |             |     |                  | LasyGit                   |
+|                           |             |     |                  | find new wallpaper       |
+|                           |             |                 |     |  TTS better voice  |
+|                           |             |     |                  | Multi clipboard          |
+| | | | | Fix, Harpoon autosave     |
+| | | | | Emojis                   | 
+
 
 https://github.com/mg979/vim-visual-multi
 
-## Gnome Extensions
-
-https://extensions.gnome.org/extension/545/hide-top-bar/
-https://extensions.gnome.org/extension/5278/pano/
 
 ## Bootstrap dotfiles
 
@@ -52,43 +64,6 @@ https://extensions.gnome.org/extension/5278/pano/
 
 ```bash
 stow -t "$HOME" omarchy
-```
-
-## Prerequests
-
-```bash
- sudo apt install ripgrep alacritty tmux zsh gir1.2-gda-5.0 gir1.2-gsound-1.0 build-essential cmake gettext ninja-build unzip
-
-```
-
-- Install rust and cargo for htmx lsp
-- Install node
-
-Install fastfetch
-https://github.com/fastfetch-cli/fastfetch
-
-## Link config files
-
-```bash
-    ln -s Documents/dotfiles/.zshrc .zshrc
-    ln -s Documents/dotfiles/.tmux.conf .tmux.conf
-
-    cd .config
-    ln -s ../Documents/dotfiles/alacritty alacritty
-    ln -s ../Documents/dotfiles/nvim nvim
-    ln -s ../Documents/dotfiles/ghostty ghostty
-```
-
-## Fonts
-
-https://www.nerdfonts.com/font-downloads
-
-```bash
-    mkdir .local/share/fonts
-    cd Downloads
-    unzip JetBrainsMono.zip
-    mv *.ttf ~/.local/share/fonts -v
-    fc-cache -f -v
 ```
 
 ## Install Neovim
@@ -131,14 +106,61 @@ Use ctrl + f to search for the language you want to install
 
 run :Verbose map <the keybinding> e.g. :Verbose map <leader>g
 
-## Rebuild hotkey cheat sheet
+## Local Neovim Text To Speech
+
+Dependencies on Arch:
 
 ```bash
-cd tools/hotkeyCheetSheet
-npx nodemon hotKeyCheetSheet.ts
+sudo pacman -S mpv socat mpc
 ```
 
+Start Kokoro-FastAPI with Podman:
+
+```bash
+podman run --rm \
+  --name kokoro-tts \
+  -p 127.0.0.1:8880:8880 \
+  -e HOST=0.0.0.0 \
+  -e PORT=8880 \
+  ghcr.io/remsky/kokoro-fastapi-cpu:latest
+```
+
+Test the TTS endpoint manually:
+
+```bash
+curl -s http://127.0.0.1:8880/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "kokoro",
+    "voice": "af_heart",
+    "input": "Hello from local text to speech in Neovim.",
+    "response_format": "mp3"
+  }' \
+  --output /tmp/test-tts.mp3
+
+mpv /tmp/test-tts.mp3
+```
+
+Neovim usage examples:
+
+```text
+gsiw        speak inner word
+gsap        speak paragraph
+gss         speak current line
+3gss        speak 3 lines
+visual gs   speak selection
+<leader>rp  pause/resume
+```
+
+Playback volume is configured in `require("local_tts").setup()` with `volume`
+and `volume_max`.
+
+Starting TTS pauses MPD playback without resuming it afterward. The hardware
+Play/Pause media keys toggle active TTS playback first, then fall back to the
+normal Omarchy/playerctl media behavior when TTS is not running.
+
 ## Rider keybindings
+
 
 Link to plugins: https://github.com/JetBrains/ideavim/wiki/IdeaVim-Plugins
 Link to commands https://github.com/JetBrains/ideavim/blob/master/src/main/java/com/maddyhome/idea/vim/package-info.java

@@ -1,0 +1,22 @@
+[Unit]
+Description=Kokoro FastAPI local TTS GPU
+After=network-online.target
+
+[Container]
+Image=ghcr.io/remsky/kokoro-fastapi-gpu:latest
+ContainerName=kokoro-tts
+PublishPort=127.0.0.1:8880:8880
+Environment=HOST=0.0.0.0
+Environment=PORT=8880
+Environment=USE_GPU=true
+Environment=DEVICE_TYPE=cuda
+Environment=DEFAULT_VOICE=af_heart
+Environment=API_LOG_LEVEL=INFO
+AddDevice=nvidia.com/gpu=all
+
+[Service]
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
