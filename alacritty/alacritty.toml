@@ -1,0 +1,35 @@
+[[keyboard.bindings]]
+action = "Paste"
+key = "V"
+mods = "Control"
+
+[font.bold]
+family = "JetBrainsMono Nerd Font"
+
+[font.italic]
+family = "JetBrainsMono Nerd Font"
+
+[font.normal]
+family = "JetBrainsMono Nerd Font"
+style = "Regular"
+
+[mouse]
+enabled = true
+hide_when_typing = false
+
+[scrolling]
+history = 10000
+multiplier = 3
+
+[window]
+opacity = 1
+
+[window.dimensions]
+columns = 140
+lines = 65
+
+[window.position]
+x = 395
+y = 51
+
+[keyboard]
