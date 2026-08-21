@@ -105,6 +105,8 @@ source $ZSH/oh-my-zsh.sh
 alias vi=nvim
 alias vim=nvim
 
+export EDITOR=vim
+export VISUAL=vim
 export PATH="$HOME/go/bin:$PATH"
 
 fastfetch

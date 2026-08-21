@@ -1,3 +1,5 @@
+general.import = [ "~/.config/alacritty/themes/catppuccin-mocha.toml" ]
+
 [[keyboard.bindings]]
 action = "Paste"
 key = "V"
@@ -31,5 +33,3 @@ lines = 65
 [window.position]
 x = 395
 y = 51
-
-[keyboard]
