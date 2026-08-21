@@ -12,8 +12,6 @@ source ~/.local/share/omarchy/default/bash/rc
 alias vi=nvim
 alias vim=nvim
 
-export EDITOR=vim
-export VISUAL=vim
 export PATH="$HOME/go/bin:$PATH"
 
 fastfetch
