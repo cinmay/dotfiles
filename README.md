@@ -68,7 +68,7 @@ stow -t "$HOME" omarchy
 ### WSL
 
 ```bash
-stow -t "$HOME" wsl alacritty
+stow -t "$HOME" wsl
 ```
 
 ## Install Neovim
