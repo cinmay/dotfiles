@@ -8,7 +8,7 @@ local watched_signature
 local function stat_signature(path)
 	local stat = vim.uv.fs_stat(path)
 	if not stat then
-		return nil
+		return "missing"
 	end
 
 	return table.concat({
@@ -80,17 +80,10 @@ function M.start_watcher(on_change)
 		2000,
 		vim.schedule_wrap(function()
 			local next_signature = stat_signature(theme_file)
-			if not next_signature then
-				return
-			end
-
-			if watched_signature and next_signature ~= watched_signature then
+			if next_signature ~= watched_signature then
 				watched_signature = next_signature
 				on_change(theme_file)
-				return
 			end
-
-			watched_signature = next_signature
 		end)
 	)
 

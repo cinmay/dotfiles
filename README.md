@@ -60,10 +60,15 @@ https://github.com/mg979/vim-visual-multi
 ## Bootstrap dotfiles
 
 ### Omarchy
-```bash
 
 ```bash
 stow -t "$HOME" omarchy
+```
+
+### WSL
+
+```bash
+stow -t "$HOME" wsl
 ```
 
 ## Install Neovim
