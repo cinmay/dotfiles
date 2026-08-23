@@ -357,3 +357,93 @@ Since your `~/.zshrc` is already symlinked to this repo, this will apply to new 
 Time: 2026-08-23 19:37:50
 --- Next Prompt ---
 
+Ok, should I run stow now?
+
+Time: 2026-08-23 20:53:59
+--- Codex Run ---
+
+Codex output:
+Not the real `stow` yet.
+
+Your last dry-run still had three conflicts:
+
+```text
+.config/ghostty/config
+.config/hypr/input.lua
+.local/share/omarchy
+```
+
+So run only the dry-run for now:
+
+```sh
+stow -n -v -t "$HOME" omarchy
+```
+
+Before the real stow, we should resolve those three deliberately:
+
+1. `~/.config/hypr/input.lua`: move the Quattro-generated file aside so the repo version can take over.
+2. `~/.config/ghostty/config`: compare live vs repo first, then decide whether repo should own it.
+3. `.local/share/omarchy`: inspect what the repo is trying to stow there; this may be generated/state-like and may not belong in Stow anymore.
+
+So: no full stow yet. The next clean step is resolving `input.lua`, because that also makes your Norwegian keyboard layout take effect.
+
+Time: 2026-08-23 20:53:59
+--- Next Prompt ---
+Okay, proceed.
+
+Time: 2026-08-23 20:56:53
+--- Codex Run ---
+
+Codex output:
+Using the Omarchy skill again. I’ll proceed through the remaining Stow blockers in order: inspect what the repo is trying to own, make repo-side cleanup where that is the right fix, and call out any live-home step I cannot perform from this sandbox.
+I’m inspecting the three remaining conflicts now. The goal is to avoid stowing generated state, preserve any meaningful live Ghostty changes, and keep `input.lua` as the explicit Quattro override.
+Two findings: the repo and live Ghostty configs are byte-for-byte identical, so that conflict is only ownership. The `.local/share/omarchy` path is not something this repo should stow in Quattro because your live path is a symlink to `/usr/share/omarchy`.
+The repo-owned `.local/share/omarchy/bin/omarchy-screensaver` is an old override of a package file; Quattro’s packaged version is newer and lives under `/usr/share/omarchy`. I’m moving that old override to `omarchy-obsolete` so Stow stops trying to own package space.
+That removes the `.local/share/omarchy` blocker from the repo side. I’m also checking Quattro’s terminal-default mechanism now, because setting Ghostty as default should be represented by `xdg-terminal-exec`, not just `$TERMINAL=ghostty`.
+`omarchy default terminal` still reports Foot. I’m going to add the Quattro terminal preference file to the repo with Ghostty first, so Stow will make `xdg-terminal-exec` choose Ghostty.
+Your UWSM override still hard-codes `TERMINAL=ghostty`. For Quattro, the cleaner setup is `TERMINAL=xdg-terminal-exec` plus an `xdg-terminals.list` that selects Ghostty. I’m making that repo-side change now.
+Repo-side terminal selection is now Quattro-aligned. I’m rerunning the dry-run and validating the small config files we just touched.
+Proceeding cleaned up one blocker and prepared Ghostty correctly for Quattro.
+
+I moved the old repo-owned screensaver override out of `omarchy/.local/share/omarchy` into `omarchy-obsolete`. That removes the `.local/share/omarchy` Stow conflict; Quattro should use the packaged `/usr/share/omarchy` version there.
+
+I also updated [uwsm/default](/home/cinmay/Documents/dotfiles/omarchy/.config/uwsm/default) to use:
+
+```sh
+export TERMINAL=xdg-terminal-exec
+```
+
+and added [xdg-terminals.list](/home/cinmay/Documents/dotfiles/omarchy/.config/xdg-terminals.list) selecting Ghostty:
+
+```text
+com.mitchellh.ghostty.desktop
+```
+
+Current dry-run is down to two conflicts:
+
+```text
+.config/ghostty/config
+.config/hypr/input.lua
+```
+
+Both are regular live files. Ghostty’s live file is identical to the repo file, and `input.lua` is the Quattro default template we want the repo override to replace.
+
+Run this locally, then stow:
+
+```sh
+stamp=$(date +%Y%m%d%H%M%S)
+
+mv ~/.config/hypr/input.lua ~/.config/hypr/input.lua.quattro-default.$stamp.bak
+mv ~/.config/ghostty/config ~/.config/ghostty/config.quattro-default.$stamp.bak
+
+stow -t "$HOME" omarchy
+hyprctl reload
+hyprctl configerrors
+omarchy default terminal
+```
+
+After that, `omarchy default terminal` should report `ghostty`, and the Norwegian keyboard layout should be active.
+
+Time: 2026-08-23 20:56:53
+--- Next Prompt ---
+
