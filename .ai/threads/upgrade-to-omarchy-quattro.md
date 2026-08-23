@@ -313,3 +313,47 @@ Verification: `stow -n -v -t /home/cinmay omarchy` no longer tries to recreate W
 Time: 2026-08-23 19:26:04
 --- Next Prompt ---
 
+➜  dotfiles git:(main) ✗ stow -n -v -t /home/cinmay omarchy
+WARNING! stowing omarchy would cause conflicts:
+  * cannot stow Documents/dotfiles/omarchy/.config/ghostty/config over existing target .config/ghostty/config since neither a link nor a directory and --adopt not specified
+  * cannot stow Documents/dotfiles/omarchy/.config/hypr/input.lua over existing target .config/hypr/input.lua since neither a link nor a directory and --adopt not specified
+  * existing target is not owned by stow: .local/share/omarchy
+All operations aborted.
+
+I have deleted the symlinks.
+
+I see there is a changed to .bashrc. I use zsh. Do we need to make any changes to .zshrc to reflect the new Quattro setup? If so, go ahead and make those changes.
+
+Time: 2026-08-23 19:37:50
+--- Codex Run ---
+
+Codex output:
+Using the Omarchy skill here because this is about keeping your shell startup aligned with Quattro’s environment. I’ll inspect your `.zshrc`, the changed `.bashrc`, and Omarchy’s current shell bootstrap before editing.
+I’m checking whether Omarchy ships anything zsh-specific. If it only ships Bash helpers, I’ll avoid sourcing Bash-only startup in zsh and just add the environment pieces that are shell-safe.
+There is no Quattro zsh startup file; Omarchy still ships Bash startup helpers. I’m reading those helpers to decide what can be safely mirrored into zsh without pulling Bash-only behavior into your interactive zsh.
+The Bash rc chain is not safe to source wholesale in zsh: it uses Bash-only pieces like `shopt`, Bash completion files, and `mise activate bash`. The useful Quattro piece for zsh is the shell-safe `env-bootstrap`, plus zsh-native initialization for tools you already rely on.
+I’m keeping this conservative: I do not want to change your zsh prompt or pull Bash completion/init files into zsh. The change I’m about to make is just to source Omarchy’s environment exports so zsh gets the same `OMARCHY_PATH`, tool PATH, editor/browser defaults, and pager defaults as Quattro’s Bash environment.
+I’m going to make two small zsh changes: source Omarchy’s shell-safe environment file near the top, and make your Go path prepend idempotent so nested shells stop duplicating it. I’m leaving Oh My Zsh, your prompt, aliases, and `fastfetch` intact.
+The zshrc edit is in place. I’m validating zsh syntax and checking that Omarchy’s environment file can actually be sourced by zsh.
+Yes, `.zshrc` needed a small Quattro alignment, but not a full port of Omarchy’s Bash rc.
+
+I updated [omarchy/.zshrc](/home/cinmay/Documents/dotfiles/omarchy/.zshrc) to source Omarchy’s shell-safe environment file:
+
+```sh
+[[ -r /usr/share/omarchy/default/bash/envs ]] && source /usr/share/omarchy/default/bash/envs
+```
+
+That gives zsh the Quattro environment pieces: `OMARCHY_PATH`, PATH adjustments, editor/browser defaults, and pager defaults. I deliberately did not source `default/bash/rc`, because that pulls in Bash-only behavior like `shopt`, Bash completions, and `mise activate bash`.
+
+I also made your `~/go/bin` PATH addition idempotent so nested zsh sessions do not keep duplicating it.
+
+Validation passed:
+
+- `zsh -n omarchy/.zshrc`
+- sourced Omarchy `envs` under `zsh -f`
+
+Since your `~/.zshrc` is already symlinked to this repo, this will apply to new zsh shells immediately. The remaining `stow` conflicts are still only `ghostty/config`, `hypr/input.lua`, and `.local/share/omarchy`.
+
+Time: 2026-08-23 19:37:50
+--- Next Prompt ---
+

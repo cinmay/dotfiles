@@ -1,6 +1,9 @@
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
+# Omarchy environment: OMARCHY_PATH, PATH, editor/browser, and pager defaults.
+[[ -r /usr/share/omarchy/default/bash/envs ]] && source /usr/share/omarchy/default/bash/envs
+
 # Path to your Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
@@ -105,6 +108,9 @@ source $ZSH/oh-my-zsh.sh
 alias vi=nvim
 alias vim=nvim
 
-export PATH="$HOME/go/bin:$PATH"
+case ":$PATH:" in
+  *":$HOME/go/bin:"*) ;;
+  *) export PATH="$HOME/go/bin:$PATH" ;;
+esac
 
 fastfetch
