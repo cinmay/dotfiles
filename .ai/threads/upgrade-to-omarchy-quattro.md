@@ -446,4 +446,79 @@ After that, `omarchy default terminal` should report `ghostty`, and the Norwegia
 
 Time: 2026-08-23 20:56:53
 --- Next Prompt ---
+What's next?
+
+
+Time: 2026-08-24 16:45:28
+--- Codex Run ---
+
+Codex output:
+Using the Omarchy skill again because the next step depends on the current live Hyprland and terminal config state. I’ll check what changed after your last local actions, then I’ll give the next concrete step.
+I’m checking whether Stow is clean now and whether the live terminal/input state reflects the repo.
+Stow is clean now, and the live files are linked: `input.lua`, Ghostty config, and `xdg-terminals.list` all point into the repo. I’m validating Hyprland and the resulting terminal/default state next.
+Current state looks good.
+
+`stow -n -v -t /home/cinmay omarchy` is now clean: no conflicts. The live files are linked correctly:
+
+- `~/.config/hypr/input.lua` -> repo
+- `~/.config/ghostty/config` -> repo
+- `~/.config/xdg-terminals.list` -> repo
+- `omarchy default terminal` now reports `ghostty`
+- `TERMINAL` is now `xdg-terminal-exec`
+
+I could not validate Hyprland from this tool context because `hyprctl` returned `Couldn't set socket timeout (2)`. Run these in your terminal:
+
+```sh
+hyprctl reload
+hyprctl configerrors
+hyprctl getoption input:kb_layout
+```
+
+Next I’d do this order:
+
+1. Verify keyboard layout and Ghostty in the live session.
+2. Make the Quattro bar hidden by default.
+3. Check the new Aether-generated themes under `~/.config/omarchy/themes`.
+4. Port the old keybindings carefully into `bindings.lua`, with explicit conflict handling.
+5. Add terminal-centering behavior using Quattro/Hyprland Lua window rules.
+
+Time: 2026-08-24 16:45:28
+--- Next Prompt ---
+1. The keyboard layout is now Norwegian bokmål and Ghostty is the default terminal. That works.
+
+Let's hide the bar by default.
+
+
+Time: 2026-08-24 16:49:42
+--- Codex Run ---
+
+Codex output:
+Using the Omarchy skill for this because Quattro’s bar is controlled by `omarchy-shell`, not Waybar. I’ll inspect the current toggle mechanism first so we make this persistent in the right layer.
+I’m looking for whether bar visibility is stored in `shell.json`, a toggle state file, or a command. The answer determines whether this should be a tracked config file or a small startup hook.
+The help confirms the supported command is `omarchy toggle bar [toggle|on|off]`. I’m reading that command now to see exactly how “off” is persisted.
+Bar visibility is persisted by the presence of `~/.local/state/omarchy/toggles/bar-off`. I’m not going to track that state file directly, because toggling the bar would remove/create a tracked symlink. Instead I’m adding a post-boot hook that forces the bar off each login while keeping runtime state untracked.
+I’m adding a single hook under `post-boot.d`, which is the Quattro hook location for “after the desktop starts.” It will call the official bar toggle command with `off`, not touch shell internals.
+The hook file exists now. I’m making it executable and checking the Stow dry-run so it will land cleanly under your live hook directory.
+The Stow dry-run is clean: it will add exactly the new `post-boot.d/hide-bar` symlink. I’m checking status once more so the final answer is precise.
+Added [hide-bar](/home/cinmay/Documents/dotfiles/omarchy/.config/omarchy/hooks/post-boot.d/hide-bar) as a Quattro `post-boot.d` hook:
+
+```sh
+#!/bin/bash
+
+omarchy toggle bar off
+```
+
+It is executable, and `bash -n` passes. `stow -n -v -t /home/cinmay omarchy` is clean and will add only this hook symlink.
+
+To apply it:
+
+```sh
+stow -t "$HOME" omarchy
+omarchy toggle bar off
+```
+
+The second command hides it immediately. The hook makes it hide by default on future desktop starts without tracking Omarchy’s runtime state file.
+
+Time: 2026-08-24 16:49:42
+--- Next Prompt ---
 
