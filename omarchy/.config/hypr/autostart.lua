@@ -10,5 +10,7 @@ local workspaces = {
 }
 
 for _, workspace in ipairs(workspaces) do
-  o.exec_on_start("hyprctl dispatch renameworkspace " .. workspace.id .. " " .. workspace.name)
+  hl.on("hyprland.start", function()
+    hl.dispatch(hl.dsp.workspace.rename({ workspace = tostring(workspace.id), name = workspace.name }))
+  end)
 end

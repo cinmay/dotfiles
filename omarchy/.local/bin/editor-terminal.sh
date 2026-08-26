@@ -2,10 +2,14 @@
 # Always jump to editor workspace (10); focus existing terminal there or launch one on that workspace.
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd)"
+HYPR_DISPATCH="$SCRIPT_DIR/hypr-lua-dispatch"
+
 WS=10
 
 # 1) Go to the editor workspace
-hyprctl dispatch workspace "$WS"
+"$HYPR_DISPATCH" workspace "$WS"
 
 # 2) Look for an existing terminal on this workspace
 FOUND="$(
@@ -24,11 +28,11 @@ FOUND="$(
 )"
 
 if [ -n "$FOUND" ]; then
-  hyprctl dispatch focuswindow "address:$FOUND"
+  "$HYPR_DISPATCH" focus-window "$FOUND"
   exit 0
 fi
 
-# 3) No terminal on WS 10 → ask Hyprland to launch it on the *current* workspace
+# 3) No terminal on WS 10: ask Hyprland to launch it on the current workspace
 CWD="$(omarchy-cmd-terminal-cwd 2>/dev/null || echo "$HOME")"
-# Use hyprctl exec so the window opens on WS 10, not the previous workspace
-hyprctl dispatch exec "bash -lc 'cd \"${CWD}\"; exec uwsm app -- \"${TERMINAL:-alacritty}\"'"
+# Use Hyprland exec so the window opens on WS 10, not the previous workspace
+"$HYPR_DISPATCH" exec "bash -lc 'cd \"${CWD}\"; exec uwsm app -- \"${TERMINAL:-alacritty}\"'"

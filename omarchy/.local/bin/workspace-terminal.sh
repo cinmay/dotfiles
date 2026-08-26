@@ -3,6 +3,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd)"
+HYPR_DISPATCH="$SCRIPT_DIR/hypr-lua-dispatch"
+
 if [ "$#" -lt 1 ]; then
   echo "Usage: ${0##*/} <workspace-id> [command...]" >&2
   exit 2
@@ -18,7 +21,7 @@ case "$WS" in
     ;;
 esac
 
-hyprctl dispatch workspace "$WS"
+"$HYPR_DISPATCH" workspace "$WS"
 
 FOUND="$(
   hyprctl -j clients \
@@ -38,7 +41,7 @@ FOUND="$(
 )"
 
 if [ -n "$FOUND" ]; then
-  hyprctl dispatch focuswindow "address:$FOUND"
+  "$HYPR_DISPATCH" focus-window "$FOUND"
   exit 0
 fi
 
@@ -49,7 +52,7 @@ fi
 
 if [ "$#" -gt 0 ]; then
   printf -v command_args ' %q' "$@"
-  hyprctl dispatch exec "bash -lc 'exec uwsm-app -- xdg-terminal-exec --dir=\"${CWD}\"${command_args}'"
+  "$HYPR_DISPATCH" exec "bash -lc 'exec uwsm-app -- xdg-terminal-exec --dir=\"${CWD}\"${command_args}'"
 else
-  hyprctl dispatch exec "bash -lc 'cd \"${CWD}\"; exec uwsm app -- \"${TERMINAL:-alacritty}\"'"
+  "$HYPR_DISPATCH" exec "bash -lc 'cd \"${CWD}\"; exec uwsm app -- \"${TERMINAL:-alacritty}\"'"
 fi

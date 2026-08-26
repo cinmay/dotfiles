@@ -2,12 +2,16 @@
 # Focus-or-launch Obsidian strictly on workspace 13.
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd)"
+HYPR_DISPATCH="$SCRIPT_DIR/hypr-lua-dispatch"
+
 WS=13
 # Covers native + Flatpak class names
 CLASS_RE='^(obsidian|md\.obsidian\.Obsidian)$'
 
 # 1) Go to the Notes workspace
-hyprctl dispatch workspace "$WS"
+"$HYPR_DISPATCH" workspace "$WS"
 
 # 2) If Obsidian already exists on WS 13, focus it
 ADDR_ON_WS="$(
@@ -20,7 +24,7 @@ ADDR_ON_WS="$(
 )"
 
 if [ -n "$ADDR_ON_WS" ]; then
-  hyprctl dispatch focuswindow "address:$ADDR_ON_WS"
+  "$HYPR_DISPATCH" focus-window "$ADDR_ON_WS"
   exit 0
 fi
 

@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# Always jump to the notes workspace (10); focus an existing terminal there or launch one.
+# Always jump to the notes workspace (13); focus an existing terminal there or launch one.
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd)"
+HYPR_DISPATCH="$SCRIPT_DIR/hypr-lua-dispatch"
+
 WS=13
 
 # 1) Go to the notes workspace
-hyprctl dispatch workspace "$WS"
+"$HYPR_DISPATCH" workspace "$WS"
 
 # 2) Look for an existing terminal on this workspace
 FOUND="$(
@@ -26,7 +30,7 @@ FOUND="$(
 )"
 
 if [ -n "$FOUND" ]; then
-  hyprctl dispatch focuswindow "address:$FOUND"
+  "$HYPR_DISPATCH" focus-window "$FOUND"
   exit 0
 fi
 

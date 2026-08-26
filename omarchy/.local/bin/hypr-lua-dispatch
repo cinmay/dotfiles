@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<USAGE
+Usage:
+  hypr-lua-dispatch workspace <id>
+  hypr-lua-dispatch rename-workspace <id> <name>
+  hypr-lua-dispatch focus-window <address>
+  hypr-lua-dispatch move-to-workspace-silent <id> <address>
+  hypr-lua-dispatch exec <command>
+  hypr-lua-dispatch group-toggle
+  hypr-lua-dispatch group-lock-active <lock|unlock>
+  hypr-lua-dispatch move-into-group <l|r|u|d>
+  hypr-lua-dispatch raw <dispatcher-and-args>
+USAGE
+  exit 2
+}
+
+json_string() {
+  jq -n --arg value "$1" '$value'
+}
+
+dispatch() {
+  hyprctl dispatch "$1"
+}
+
+command="${1:-}"
+shift || true
+
+case "$command" in
+  workspace)
+    [[ $# -eq 1 ]] || usage
+    dispatch "hl.dsp.focus({ workspace = $(json_string "$1") })"
+    ;;
+  rename-workspace)
+    [[ $# -eq 2 ]] || usage
+    dispatch "hl.dsp.workspace.rename({ workspace = $(json_string "$1"), name = $(json_string "$2") })"
+    ;;
+  focus-window)
+    [[ $# -eq 1 ]] || usage
+    dispatch "hl.dsp.exec_raw($(json_string "focuswindow address:$1"))"
+    ;;
+  move-to-workspace-silent)
+    [[ $# -eq 2 ]] || usage
+    dispatch "hl.dsp.exec_raw($(json_string "movetoworkspacesilent $1,address:$2"))"
+    ;;
+  exec)
+    [[ $# -gt 0 ]] || usage
+    dispatch "hl.dsp.exec_cmd($(json_string "$*"))"
+    ;;
+  group-toggle)
+    [[ $# -eq 0 ]] || usage
+    dispatch "hl.dsp.group.toggle()"
+    ;;
+  group-lock-active)
+    [[ $# -eq 1 ]] || usage
+    case "$1" in
+      lock) locked=true ;;
+      unlock) locked=false ;;
+      *) usage ;;
+    esac
+    dispatch "hl.dsp.group.lock_active({ locked = $locked })"
+    ;;
+  move-into-group)
+    [[ $# -eq 1 ]] || usage
+    dispatch "hl.dsp.window.move({ into_group = $(json_string "$1") })"
+    ;;
+  raw)
+    [[ $# -gt 0 ]] || usage
+    dispatch "hl.dsp.exec_raw($(json_string "$*"))"
+    ;;
+  *)
+    usage
+    ;;
+esac

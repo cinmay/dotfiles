@@ -3,11 +3,14 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd)"
+HYPR_DISPATCH="$SCRIPT_DIR/hypr-lua-dispatch"
+
 WS=14
 CLASS_RE='^(chrome-discord\.com__app-Default|chrome-discord\.com__-Default)$'
 TITLE_RE='Discord'
 
-hyprctl dispatch workspace "$WS"
+"$HYPR_DISPATCH" workspace "$WS"
 
 ADDR_ON_WS="$(
   hyprctl -j clients \
@@ -26,7 +29,7 @@ ADDR_ON_WS="$(
 )"
 
 if [ -n "$ADDR_ON_WS" ]; then
-  hyprctl dispatch focuswindow "address:$ADDR_ON_WS"
+  "$HYPR_DISPATCH" focus-window "$ADDR_ON_WS"
   exit 0
 fi
 

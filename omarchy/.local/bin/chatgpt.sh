@@ -2,11 +2,15 @@
 # Focus-or-launch ChatGPT strictly on workspace 12.
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd)"
+HYPR_DISPATCH="$SCRIPT_DIR/hypr-lua-dispatch"
+
 WS=12
 CLASS_RE='^chrome-chatgpt\.com__-Default$'  # Your PWA class
 
 # 1) Go to the ChatGPT workspace
-hyprctl dispatch workspace "$WS"
+"$HYPR_DISPATCH" workspace "$WS"
 
 # 2) If a ChatGPT window exists on WS 12, focus it
 ADDR_ON_WS="$(
@@ -19,7 +23,7 @@ ADDR_ON_WS="$(
 )"
 
 if [ -n "$ADDR_ON_WS" ]; then
-  hyprctl dispatch focuswindow "address:$ADDR_ON_WS"
+  "$HYPR_DISPATCH" focus-window "$ADDR_ON_WS"
   exit 0
 fi
 

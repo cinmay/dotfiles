@@ -6,6 +6,7 @@ rmpc_class="com.cinmay.rmpc"
 youtube_class="com.cinmay.youtube-music"
 youtube_url="https://music.youtube.com"
 script_dir="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd)"
+hypr_dispatch="$script_dir/hypr-lua-dispatch"
 rmpc_launcher="$script_dir/rmpc-music-session.sh"
 
 clients() {
@@ -41,11 +42,11 @@ address_from() {
 }
 
 focus_window() {
-  hyprctl dispatch focuswindow "address:$1" >/dev/null
+  "$hypr_dispatch" focus-window "$1" >/dev/null
 }
 
 workspace_music() {
-  hyprctl dispatch workspace "$music_workspace" >/dev/null
+  "$hypr_dispatch" workspace "$music_workspace" >/dev/null
 }
 
 is_grouped() {
@@ -63,9 +64,9 @@ ensure_group() {
 
   focus_window "$address"
   if ! is_grouped "$address"; then
-    hyprctl dispatch togglegroup >/dev/null || true
+    "$hypr_dispatch" group-toggle >/dev/null || true
   fi
-  hyprctl dispatch lockactivegroup unlock >/dev/null || true
+  "$hypr_dispatch" group-lock-active unlock >/dev/null || true
 }
 
 lock_group() {
@@ -73,14 +74,14 @@ lock_group() {
 
   focus_window "$address"
   if is_grouped "$address"; then
-    hyprctl dispatch lockactivegroup lock >/dev/null || true
+    "$hypr_dispatch" group-lock-active lock >/dev/null || true
   fi
 }
 
 move_to_music_workspace() {
   local address="$1"
 
-  hyprctl dispatch movetoworkspacesilent "$music_workspace,address:$address" >/dev/null || true
+  "$hypr_dispatch" move-to-workspace-silent "$music_workspace" "$address" >/dev/null || true
 }
 
 move_into_group() {
@@ -94,7 +95,7 @@ move_into_group() {
   focus_window "$moving_address"
 
   for direction in l r u d; do
-    hyprctl dispatch moveintogroup "$direction" >/dev/null || true
+    "$hypr_dispatch" move-into-group "$direction" >/dev/null || true
     if is_grouped "$moving_address"; then
       lock_group "$moving_address"
       return 0
@@ -109,11 +110,11 @@ launch_rmpc() {
   local launcher
 
   printf -v launcher "%q" "$rmpc_launcher"
-  hyprctl dispatch exec "[workspace $music_workspace] bash -lc 'exec uwsm-app -- ghostty --class=$rmpc_class --title=rmpc-music -e $launcher'" >/dev/null
+  "$hypr_dispatch" exec "[workspace $music_workspace] bash -lc 'exec uwsm-app -- ghostty --class=$rmpc_class --title=rmpc-music -e $launcher'" >/dev/null
 }
 
 launch_youtube() {
-  hyprctl dispatch exec "[workspace $music_workspace] omarchy-launch-webapp $youtube_url --class=$youtube_class" >/dev/null
+  "$hypr_dispatch" exec "[workspace $music_workspace] omarchy-launch-webapp $youtube_url --class=$youtube_class" >/dev/null
 }
 
 wait_for_rmpc() {
