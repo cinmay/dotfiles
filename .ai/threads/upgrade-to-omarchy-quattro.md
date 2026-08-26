@@ -924,3 +924,42 @@ Then try `SUPER+I`, `SUPER+G`, `SUPER+E`, etc.
 Time: 2026-08-26 20:51:07
 --- Next Prompt ---
 
+Let's replace the old chagGpt web launcher with the new native ChatGPT client that i have already installed in Omarchy.
+
+Time: 2026-08-26 21:00:55
+--- Codex Run ---
+
+Codex output:
+I’ll use the Omarchy config path for this since it affects your Hyprland launcher binding, then I’ll identify the native ChatGPT executable/class from the installed system before editing the script.
+I’m looking for the installed native client’s desktop entry and executable now. The key pieces are the launch command and the Hyprland class/app-id it uses so the focus-or-launch script can target it reliably.
+The native client is present as `/usr/bin/chatgpt` and has a system desktop file. I’m inspecting that desktop entry now; the old user desktop entry still points to the web launcher, but the keybinding script is the main thing to update.
+There are two ChatGPT launchers on the machine: the system native one at `/usr/share/applications/chatgpt.desktop` runs `chatgpt %U`, while your old user desktop file still runs `omarchy-launch-webapp https://chatgpt.com/`. I’m going to update the keybinding script first and then check whether that old user desktop entry is tracked here.
+The keybinding script is stow-owned, but the old `~/.local/share/applications/ChatGPT.desktop` is a regular live file outside the repo. I can fix the tracked keybinding now; the desktop entry will need either removal or a tracked replacement if you want the app menu cleaned up too.
+For focus matching I’m going to avoid title matching, because that could still catch the old browser/PWA window. I’ll match only the native class/app-id candidates and launch `/usr/bin/chatgpt` through `uwsm app`.
+I’ll use the Omarchy skill here because this touches the launcher and Hyprland-bound desktop workflow. I’m going to verify the current script and the installed native client, then patch only the repo-managed launcher.
+I’m checking the launcher file and desktop entries before editing. The likely change is small: keep your `SUPER+A` binding pointing at the same script, but make that script focus or launch the native `chatgpt` binary instead of the old web app.
+The native client is installed as `/usr/bin/chatgpt`, while your repo launcher still targets `omarchy-launch-webapp https://chatgpt.com`. I’m going to replace that behavior in `omarchy/.local/bin/chatgpt.sh` and match native ChatGPT window classes case-insensitively.
+There is also an old per-user desktop entry in `~/.local/share/applications/ChatGPT.desktop` that still launches the web app. I can’t remove it from this sandbox, so I’ll keep this change to the repo-managed hotkey launcher and call out the manual cleanup at the end.
+The launcher script now points to the native client. I’m running a syntax check and a stow dry-run so we know whether anything else needs attention before you try it.
+The repo-managed `SUPER+A` path is active already because the live `~/.local/bin/chatgpt.sh` resolves to this dotfiles script. I’m doing one broader search now for any remaining repo references to the old web launcher.
+The only remaining web-launcher references are inside `omarchy-obsolete`, so they won’t affect the Quattro setup. I’m checking the final diff for the launcher before I wrap this up.
+Updated [chatgpt.sh](/home/cinmay/Documents/dotfiles/omarchy/.local/bin/chatgpt.sh:1).
+
+`SUPER+A` now still goes to workspace 12, but it focuses/launches the native ChatGPT client via:
+
+```bash
+uwsm app -- chatgpt
+```
+
+It no longer uses `omarchy-launch-webapp https://chatgpt.com`.
+
+Verified:
+- `bash -n` passed.
+- `stow -n -v -t /home/cinmay omarchy` has no conflicts.
+- The live `~/.local/bin/chatgpt.sh` already points to this repo file, so the hotkey change should take effect immediately.
+
+One remaining note: you still have an unmanaged old desktop entry at `~/.local/share/applications/ChatGPT.desktop` that launches the web app. If the Omarchy app launcher still shows/opens the old web version, move that file aside or change its `Exec` to `chatgpt %U`.
+
+Time: 2026-08-26 21:00:55
+--- Next Prompt ---
+
