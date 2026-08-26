@@ -2,7 +2,6 @@
 import argparse
 import json
 import os
-import shutil
 import socket
 import subprocess
 import sys
@@ -100,16 +99,7 @@ def status(sock_path):
 
 
 def fallback_media_toggle():
-    swayosd_client = shutil.which("omarchy-swayosd-client")
-    if swayosd_client is not None:
-        command = [swayosd_client, "--playerctl", "play-pause"]
-    else:
-        playerctl = shutil.which("playerctl")
-        if playerctl is None:
-            print("No active TTS playback and playerctl is not installed", file=sys.stderr)
-            return 1
-
-        command = [playerctl, "play-pause"]
+    command = ["omarchy-shell", "media", "playPause"]
 
     try:
         return subprocess.run(command, check=False).returncode
