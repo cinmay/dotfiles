@@ -118,18 +118,24 @@ vim.schedule(function()
 	vim.o.clipboard = "unnamedplus"
 end)
 
-vim.g.clipboard = {
-	name = "WslClipboard",
-	copy = {
-		["+"] = "clip.exe",
-		["*"] = "clip.exe",
-	},
-	paste = {
-		["+"] = 'powershell.exe -NoLogo -NoProfile -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
-		["*"] = 'powershell.exe -NoLogo -NoProfile -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
-	},
-	cache_enabled = 0,
-}
+local has_wsl_clipboard = vim.fn.has("wsl") == 1
+	and vim.fn.executable("clip.exe") == 1
+	and vim.fn.executable("powershell.exe") == 1
+
+if has_wsl_clipboard then
+	vim.g.clipboard = {
+		name = "WslClipboard",
+		copy = {
+			["+"] = "clip.exe",
+			["*"] = "clip.exe",
+		},
+		paste = {
+			["+"] = 'powershell.exe -NoLogo -NoProfile -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
+			["*"] = 'powershell.exe -NoLogo -NoProfile -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
+		},
+		cache_enabled = 0,
+	}
+end
 
 -- Enable break indent
 vim.o.breakindent = true

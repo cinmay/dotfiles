@@ -963,3 +963,103 @@ One remaining note: you still have an unmanaged old desktop entry at `~/.local/s
 Time: 2026-08-26 21:00:55
 --- Next Prompt ---
 
+
+Is there anything that is new in the Quattro installation proses that I have not set because I have upgraded from a previous Omarchy installation? Default ai agent etc? 
+
+Time: 2026-08-26 21:17:25
+--- Codex Run ---
+
+Codex output:
+I’ll use the Omarchy skill for this because this is about Quattro defaults and upgrade gaps. I’ll compare your repo/live config against the installed Omarchy defaults and also check current Omarchy documentation so we don’t guess from stale assumptions.
+The current manual confirms Quattro added a “default coding agent” flow and does not choose one automatically. I’m now checking the installed package scripts and your local state to see what would normally be seeded during a fresh install versus what may be missing after an upgrade.
+Your installed Omarchy reports `4.0.1-1`, not just `4.0.0`, so I’m treating the local package as the source of truth and using the web manual/release notes only to identify what fresh Quattro expects. Next I’m checking the default-agent state, first-run hooks, user services, and the mise/skill setup.
+The default agent appears unset: `omarchy-default-agent` returned nothing. That is expected on a fresh Quattro install until you choose one, but if you upgraded you may also have missed the one-time notification that invites you to make the choice.
+First-run markers exist, including the `agent-setup-invitation` marker, but the actual default-agent file is missing. So the machine thinks the invitation has already been shown, while no agent was chosen.
+The core first-run pieces look present: `~/Work`, `~/Work/tries`, the mise stubs for the old agent set, and the enabled user-unit symlinks all exist. The missing pieces I’m seeing so far are around newly added agent options/skills and the unset default agent choice.
+Your bar config still includes Omarchy’s agents widget, so the usage panel should appear once Omarchy sees relevant agent usage. I’m checking the broader “defaults” surface now: agent, browser/editor/terminal/chat app, MIME defaults, and first-run additions like ChatGPT desktop, Omawrite/Omacalc/Omacut, and shell overrides.
+One practical upgrade wrinkle: Quattro’s terminal agent shortcuts are shipped as Bash aliases. Since you use zsh, those aliases probably are not available unless we port them deliberately. I’m checking your zsh config before making any recommendation there.
+Your `~/.config/mimeapps.list` already has `x-scheme-handler/codex=chatgpt.desktop`, which is one Quattro-native integration for the desktop ChatGPT/Codex app. The stale piece is only the old `ChatGPT.desktop` web shortcut in user applications.
+One config mismatch stands out: your repo-managed `~/.config/uwsm/default` overrides Quattro’s packaged default `EDITOR="omarchy-launch-editor --inline"` with plain `nvim`, and it still exports `CHAT_APP=discord`, which I don’t see in the new packaged default. That may be intentional, but it is no longer the stock Quattro shape.
+There is an upgrade-created UWSM env file still present: `~/.config/uwsm/env.d/99-omarchy-upgrade-env`. That may be more important than the repo `default` file because it can override session defaults after Quattro’s normal environment file. I’m reading that next.
+The upgrade env file is mostly no-op markers plus a PATH prepend. It is probably harmless, but it is legacy upgrade debris; once we’re confident the system session already gets `/usr/share/omarchy/default/uwsm/env.d/10-omarchy`, it can be removed or moved out of the way.
+I’m looking at the first-run leaf scripts now. Some of these are one-time ergonomics or hardware setup, not dotfiles; the useful part is checking whether their effects exist locally, not copying their scripts into git.
+The GNOME/GTK first-run settings are already applied, and the first-run completion marker is present. I’m now checking copied hooks/extensions that live in `~/.config/omarchy`, because those can become stale after package updates.
+A more serious finding: your custom `autostart.lua` currently replaces Omarchy’s autostart behavior instead of extending it. That means the repo version omits stock Quattro startup actions like launching the shell, running first-run provisioning, starting monitor/watch services, udiskie, and post-boot hooks.
+Correction after checking the loader: `hyprland.lua` loads `default.hypr.omarchy` first, and that already loads the stock autostart. Your `hypr.autostart` runs afterward, so it extends startup rather than replacing it. The stock shell/provision/udiskie actions should still be loaded.
+The big `omarchy-menu.jsonc` diff is not a problem by itself: the user file is an extension file, not supposed to mirror the full packaged menu. I’m comparing it against the packaged extension template instead of the full menu definition.
+The installed 4.0.1 package supports the Quattro release-note agent set: Claude, Codex, OpenCode, Gemini, Copilot, Crush, Grok, Pi, and Oh My Pi. The online `quattro` branch manual has already grown extra entries like Antigravity/Ori, but your local menu/script does not expose them yet, so I’d treat those as future package changes, not something to hand-maintain right now.
+The agent usage panel is functioning locally: I found current `codex.json`, `claude.json`, and `fireworks.json` usage records, with Codex marked ready. So the panel infrastructure is not the gap; the default-agent selection is.
+The Omarchy skill symlinks are present for Codex, Claude, Pi, and the generic `~/.agents` path. Your empty `~/.gemini/config/skills` exists but does not contain Omarchy skills, which matches the installed 4.0.1 package behavior I can see locally.
+The main legacy env issue is PATH ordering: Quattro’s bootstrap intentionally does not prepend `/usr/share/omarchy/bin` on production installs, but your upgrade env file does. Usually that is just noise because both copies are package-owned, but it is a cleanup candidate.
+There are no active old Waybar/Walker/Mako/SwayOSD directories left, only timestamped backups from the upgrade. The one active leftover from the old web-app world is still `~/.local/share/applications/ChatGPT.desktop`.
+For strict “fresh Quattro” parity, there are also a couple of old app leftovers: `signal-desktop` and `spotify` are still installed, and you still have user webapp entries for Figma/GitHub/ChatGPT. Those do not stop Quattro from working; they are cleanup choices.
+Yes. The main thing actually missing is the **default coding agent**.
+
+I checked your local state:
+
+- Omarchy is `4.0.1-1`.
+- `omarchy-default-agent` returns nothing.
+- `~/.config/omarchy/defaults/agent` does not exist.
+- The one-time “set your default agent” invitation is already marked as shown.
+- Codex is installed and has usage data, so `codex` is the obvious default candidate.
+
+So the practical fix, when you want it, is:
+
+```bash
+omarchy default agent codex
+```
+
+That enables `Super + Shift + Ctrl + A`, `omarchy agent`, and the right-click behavior on the agents bar widget.
+
+Other findings:
+
+- Your Quattro first-run setup mostly did run: `~/Work`, `~/Work/tries`, user service symlinks, Omarchy agent skills for Codex/Claude/Pi/general, GTK theme, and primary paste settings are present.
+- The agents bar widget is still in your `shell.json`; Codex usage data exists, so that part is working.
+- Your zsh config does **not** include Quattro’s new Bash aliases like `a`, `c`, `cx`, `cy`, `mup`. Since you use zsh, we should discuss which of those you want ported.
+- Your `~/.config/uwsm/default` intentionally deviates from Quattro: stock uses `EDITOR="omarchy-launch-editor --inline"`, yours uses `EDITOR=nvim`. That is probably fine, but it bypasses Omarchy’s default-editor switcher.
+- You still have an old unmanaged `~/.local/share/applications/ChatGPT.desktop` web launcher. The native `chatgpt.desktop` is installed, but the old user entry is still cleanup debt.
+- `signal-desktop` and `spotify` are still installed even though Quattro moved them out of the default install set. That is harmless unless you want strict fresh-install parity.
+
+I would not run `omarchy reinstall configs`; it is broad and destructive. I’d handle this with targeted cleanup.
+
+Recommended next discussion: choose whether your default agent should be `codex`, then decide whether to port Quattro’s agent aliases into `.zshrc`.
+
+Sources checked: [Omarchy AI manual](https://github.com/basecamp/omarchy/blob/quattro/manual/17-ai.md), [Omarchy 4.0.0 release notes](https://newreleases.io/project/github/basecamp/omarchy/release/v4.0.0), [Omarchy 4.0.1 release notes](https://newreleases.io/project/github/basecamp/omarchy/release/v4.0.1).
+
+Time: 2026-08-26 21:17:25
+--- Next Prompt ---
+I set codex as my default agent. I don't want to port the Quattro agent aliases into zsh.
+What do we have left to do to complete the upgrade? 
+
+
+Time: 2026-08-26 21:44:51
+--- Codex Run ---
+
+Codex output:
+I’m using the Omarchy skill to run a final read-only upgrade audit. I’ll verify that Codex is now selected, then separate actual Quattro blockers from optional cleanup so we have a clear finish line.
+The core upgrade is already healthy: Omarchy is `4.0.1-1`, Codex is confirmed as the default agent, Stow reports no conflicts, and Hyprland reports no configuration errors. I’m checking the remaining edge cases now, especially the Aether themes, terminal-centering preference, and a few upgrade leftovers that may be harmless backups rather than active configuration.
+Two findings are becoming clear. The Aether themes are recognized by Quattro and both `colors.toml` files parse cleanly, so they are not an upgrade blocker; the one original preference that still appears unimplemented is centering terminal windows. I’m doing one final consistency pass before giving you the exact required-versus-optional list.
+The Quattro upgrade is functionally complete. Codex is selected as the default agent, Omarchy reports itself up to date, Stow has no conflicts, Hyprland has no config errors, and the workspace plugin validates correctly. The official [AI setup documentation](https://github.com/basecamp/omarchy/blob/quattro/manual/17-ai.md) confirms the default-agent step is now satisfied.
+
+What remains:
+
+1. **Center terminal windows.** This is the only requested behavior we have not implemented. Currently Ghostty terminals use normal tiled placement.
+
+2. **Archive the obsolete ChatGPT launcher.** [ChatGPT.desktop](/home/cinmay/.local/share/applications/ChatGPT.desktop) still launches the website and duplicates the native `chatgpt.desktop` entry.
+
+3. **Remove two inert upgrade artifacts.**
+   - [99-omarchy-upgrade-env](/home/cinmay/.config/uwsm/env.d/99-omarchy-upgrade-env) contains obsolete pre-Quattro PATH setup.
+   - [default.omarchy-upgrade-to-quattro.20260823181455.bak](/home/cinmay/.config/uwsm/default.omarchy-upgrade-to-quattro.20260823181455.bak) is an accidental symlink created around the `stow --adopt` incident.
+
+4. **Optionally archive old backups.** The timestamped Waybar, Walker, Mako, SwayOSD, and old Hyprland `.conf` files are not loaded and cannot interfere. They can remain as recovery material or be moved into `omarchy-obsolete`.
+
+The two Aether themes are recognized by Quattro, contain backgrounds, and both color definitions parse successfully. They do not need manual changes or removal. Your current active theme is Ethereal.
+
+Your `EDITOR=nvim` setting is also valid. It bypasses Omarchy’s editor selector, but that matches your setup rather than indicating an incomplete upgrade. Quattro’s documented update process runs migrations through `omarchy update`, and your installation currently reports no update pending. [Omarchy updates documentation](https://github.com/basecamp/omarchy/blob/quattro/manual/30-updates.md)
+
+I recommend handling terminal centering next, followed by archiving the three stale active-path artifacts. No changes were made during this audit.
+
+Time: 2026-08-26 21:44:51
+--- Next Prompt ---
+I removed the obsolete ChatGPT launcher.
+It seems the timer on the screen lock is also not updated. It seems very fast now. Find out what the current settings are and then we can decide what to do about it.
