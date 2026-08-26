@@ -1063,3 +1063,51 @@ Time: 2026-08-26 21:44:51
 --- Next Prompt ---
 I removed the obsolete ChatGPT launcher.
 It seems the timer on the screen lock is also not updated. It seems very fast now. Find out what the current settings are and then we can decide what to do about it.
+
+Time: 2026-08-26 21:59:43
+--- Codex Run ---
+
+Codex output:
+I’m using the Omarchy skill because Quattro moved idle and lock timing into `omarchy-shell`. I’ll inspect the effective shell settings, compare them with Quattro defaults, and check whether any old idle service is still running.
+The effective Quattro values are indeed aggressive: the screensaver starts after **150 seconds (2.5 minutes)** and the session locks after **300 seconds (5 minutes)**. Those are the current Quattro defaults, and the lock timer is measured from the moment you stop providing input, not from when the screensaver appears.
+Your previous tracked configuration confirms this is a real regression in preference, not a stray old service: you deliberately committed an “Extended idle time” change before Quattro. The old numeric settings were much longer, while Quattro copied its stock 2.5/5-minute values into the new shell configuration.
+The current effective settings in [shell.json](/home/cinmay/Documents/dotfiles/omarchy/.config/omarchy/shell.json:3) are:
+
+- Screensaver: **150 seconds / 2.5 minutes**
+- Lock: **300 seconds / 5 minutes from initial inactivity**
+- Display and keyboard backlight: off roughly **5 seconds after locking**
+- Stay Awake: off, so idle handling is active
+
+These exactly match Quattro’s defaults. No old `hypridle` configuration is active.
+
+Your obsolete configuration shows you had deliberately extended the timers. Its comments say **15 minutes to screensaver and 30 minutes to lock**, but its actual numeric values were **1800/3600 seconds**, meaning 30/60 minutes. Quattro’s timing model is simpler, so we can now express the intended durations directly:
+
+- `900/1800`: screensaver after 15 minutes, lock after 30 minutes
+- `1800/3600`: match the old numeric values, 30 minutes and 60 minutes
+- `600/1200`: a middle ground, 10 minutes and 20 minutes
+
+My reading of your old comments is that **15/30 minutes** was the intended behavior. No changes made yet.
+
+Time: 2026-08-26 21:59:43
+--- Next Prompt ---
+Is my laptop display susceptible to burn-in? I have the dell xps 15 9520 with the WLED UHD+ Touch display option. If not then let's go for 30 minutes to screensaver and 60 minutes to lock.
+
+Time: 2026-08-26 22:05:37
+--- Codex Run ---
+
+Codex output:
+I’m using the Omarchy skill for the idle-timer change, and I’ll first verify Dell’s panel technology from the official specifications. If the UHD+ WLED option is the expected LCD panel rather than OLED, I’ll set the Quattro timers to 30 and 60 minutes.
+Dell’s specification lists the UHD+ touch panel as **WLED** and the 3.5K option separately as **OLED**. Yours is therefore an LED-backlit LCD, so it does not have the cumulative OLED-style burn-in risk; LCD image retention is still theoretically possible after very long static use, but 30 minutes is comfortably conservative. I’m updating the two Quattro idle values to `1800` and `3600` seconds now.
+Your UHD+ touch display is a WLED-backlit LCD, distinct from the XPS 15 9520’s separate OLED option. It is not meaningfully susceptible to permanent OLED-style burn-in, though extreme static use can cause temporary LCD image retention. [Dell’s display specifications](https://www.dell.com/support/manuals/en-au/xps-15-9520-laptop/xps-15-9520-setup-and-specifications/display?guid=guid-5579fc11-9b22-44fa-ba0d-ae67ba34e9f8&lang=en-us)
+
+I updated [shell.json](/home/cinmay/Documents/dotfiles/omarchy/.config/omarchy/shell.json:3) to:
+
+- Screensaver: **30 minutes**
+- Lock: **60 minutes**
+- Display off: approximately 5 seconds after locking
+
+The live stowed configuration reflects the change, JSON validation passed, and Stow reports no conflicts. Quattro should hot-reload these settings without a restart.
+
+Time: 2026-08-26 22:05:37
+--- Next Prompt ---
+
