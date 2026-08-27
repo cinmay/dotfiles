@@ -1110,4 +1110,178 @@ The live stowed configuration reflects the change, JSON validation passed, and S
 
 Time: 2026-08-26 22:05:37
 --- Next Prompt ---
+Next, let's implement the terminal centering behavior. I want to be able to center the terminal windows on the screen so that it takes up the full screen height but is horizontally centered. This is to help with focus as the full screen with is too wide for my eyes to comfortably read. If I remember correctly, I configured neovim to have a width warning line at 120 characters. I think the terminal should be a little bigger than that. Research the old settings. 
+I was not super happy with the old terminal centering behavior because it could change between presses. I'm open to doing things is a different way if it is more stable. Let's research and discuss the options before we implement it.
+Only ask questions if you have them. Please share your thoughts and suggestions.
+
+Time: 2026-08-26 22:20:57
+--- Codex Run ---
+
+Codex output:
+I’m using the Omarchy skill because this is a Hyprland window-layout decision. I’ll trace the old centering implementation and its history, confirm the Neovim width target and effective display geometry, then compare stable Quattro-native approaches before recommending one. No files will be changed.
+The old setup is now clear at a high level: terminal-tagged windows were forced floating, centered, and sized to `70%` of monitor width by `98%` of monitor height. On your current logical `1920×1200` desktop, that is roughly `1344×1176`, which is much wider than a 120-column editor at Ghostty’s current 9-point font. I’m tracing the earlier key-driven versions next, because that likely explains why repeated presses produced different layouts.
+The instability has a concrete cause: your first implementation bound `Super+C` to `togglefloating`, then resized and centered. Every press flipped the window between tiled and floating, so the same key could not be idempotent. A later experiment used Dwindle’s single-window aspect ratio, which necessarily changed when another window appeared. Both are poor fits for the stable behavior you want.
+**What I Found**
+
+Your previous implementations used two approaches:
+
+- A manual binding ran `togglefloating`, resized to `1420x1420`, then centered. Because it toggled the floating state, repeated presses produced different results.
+- The later configuration in [windows.conf](/home/cinmay/Documents/dotfiles/omarchy-obsolete/.config/hypr/windows.conf:1) automatically floated terminals at `70%` width and `98%` height. On your current 1920×1200 logical display, that is roughly 187 columns, considerably wider than your target.
+
+Neovim’s guideline is indeed 120 characters in [init.lua](/home/cinmay/Documents/dotfiles/omarchy/.config/nvim/init.lua:198). With your Ghostty font and padding, a terminal at **50% monitor width** should provide approximately **132 columns**. That is a sensible margin beyond the 120-character guideline.
+
+**Options**
+
+1. **Static Ghostty rule**
+   
+   Open Ghostty at 50% width, 98% height, floating and centered. Hyprland applies `float`, `size`, and `center` window rules once when a window opens, making this deterministic. [Hyprland window-rule documentation](https://wiki.hypr.land/Configuring/Basics/Window-Rules/)
+
+   The rule should match `com.mitchellh.ghostty`, not the general `terminal` tag, because Omarchy also tags smaller TUI applications as terminals.
+
+2. **Idempotent centering binding**
+   
+   Add something like `Super+Alt+C` that explicitly sets the active window floating, resizes it to the target dimensions, and centers it. Unlike the old binding, it would never toggle state, so every press produces the same result.
+
+3. **Scrolling layout**
+   
+   Quattro’s newer scrolling layout can keep tiled windows full-height in centered columns, commonly at 50% width. It handles multiple terminals more naturally than overlapping floating windows. However, it changes the layout behavior of an entire workspace and introduces a different navigation model. [Hyprland scrolling-layout documentation](https://wiki.hypr.land/Configuring/Layouts/Scrolling-Layout/)
+
+**Recommendation**
+
+Use both:
+
+- A static Ghostty-specific rule: **50% width and 98% height**
+- `Super+Alt+C` as an idempotent reset command
+- Keep Quattro’s normal `Super+T` float/tile behavior
+
+This gives you approximately 132 columns, automatic centering for new terminals, and a reliable way to restore the geometry after manual changes. Your focus-or-launch scripts will simply focus an existing terminal, so repeated workspace presses will no longer alter its state.
+
+The main tradeoff is that multiple ordinary Ghostty windows on one workspace would overlap. Given your one-workspace-per-task and tmux-oriented workflow, that appears preferable to changing the entire workspace layout. I recommend testing the scrolling layout separately later rather than making it the default now.
+
+No files have been changed.
+
+Time: 2026-08-26 22:20:57
+--- Next Prompt ---
+Can we do something fancy in lua now? Or is that not necessary?
+
+Time: 2026-08-27 07:56:19
+--- Codex Run ---
+
+Codex output:
+Lua is useful here for the reset command, but the automatic default should remain declarative. I’m checking the current Quattro config structure so I can distinguish a worthwhile helper from complexity that would make the behavior less predictable.
+Yes, but only where Lua adds determinism.
+
+The automatic behavior should remain a simple Lua window rule:
+
+- Match Ghostty exactly.
+- Float it.
+- Set it to `50% × 98%` of the current monitor.
+- Center it.
+
+Lua becomes useful for the manual `Super+Alt+C` command. We can define an idempotent `center_terminal()` function that:
+
+1. Confirms the active window is Ghostty.
+2. Explicitly sets it floating instead of toggling.
+3. Applies the target dimensions.
+4. Centers it.
+
+This will adapt to different monitor sizes without hardcoded pixels. I would avoid event callbacks, saved geometry, or cycling through widths; those add state and could reproduce the inconsistent behavior you disliked.
+
+I suggest placing the declarative rule in a new `windows.lua`, loading it from `hyprland.lua`, and keeping the reset function and binding in `bindings.lua`. That is modestly fancy Lua, but still clear and maintainable. No changes made yet.
+
+Time: 2026-08-27 07:56:19
+--- Next Prompt ---
+
+Can we make the toggle command work for any window? And simply have ghostty default to the centered size? 
+
+Time: 2026-08-27 07:59:11
+--- Codex Run ---
+
+Codex output:
+Yes. That is a cleaner separation:
+
+- **Ghostty default:** A static rule opens Ghostty floating, centered, at `50% × 98%`.
+- **Any-window command:** `Super+Alt+C` applies that same focused geometry to whichever window is active.
+- **Return to tiled:** Keep using Quattro’s existing `Super+T`.
+
+I recommend making `Super+Alt+C` a **Center active window** command rather than a true toggle. It will always produce the same result: set floating, resize, center. Using `Super+T` to return to tiling avoids maintaining hidden Lua state and prevents the inconsistent behavior from the old toggle.
+
+We could make one key alternate between centered and tiled, but that requires deciding what to do with windows that were already floating or had custom geometry. The separate commands are more predictable. No changes made yet.
+
+Time: 2026-08-27 07:59:11
+--- Next Prompt ---
+
+`Super+Alt+C` is a bit cumbersome. Can we have a better keybinding for that? What is the current keybinding for `Super+C`? Or could be have three toggles for `Super+T`? Toggling between tiled, floating, and centered? 
+Can you suggest some options for a better user experience? I suspect Ill be using this feature enough to warrant a more convenient keybinding.
+
+Time: 2026-08-27 08:04:56
+--- Codex Run ---
+
+Codex output:
+I’m checking Quattro’s active `C` and `T` bindings before recommending a replacement. The important design choice is whether centered should become the standard floating state or remain a separate mode.
+`Super+C` is currently Quattro’s **Universal copy**:
+
+- Normal applications: sends `Ctrl+C`
+- Terminals: sends `Ctrl+Insert`
+
+Your paste changes did not alter it. I recommend keeping it. `Super+Ctrl+C` is Capture, and `Super+Shift+C` is Calendar.
+
+**Best Options**
+
+1. **Enhanced `Super+T` two-state toggle** (recommended)
+
+   - Tiled → centered floating at `50% × 98%`
+   - Any floating state → tiled
+   - Ghostty opens centered by default
+
+   This is deterministic because Lua only needs to inspect whether the active window is floating. There is no hidden cycle state. After centering, you can still move or resize the floating window manually.
+
+2. **`Super+Z` for Center/Zen**
+
+   - Keep Quattro’s existing `Super+T`
+   - `Super+Z` always floats, resizes, and centers the active window
+   - Use `Super+T` to return it to tiling
+
+   `Super+Z` is currently free, convenient, and mnemonic for a focused “Zen” width.
+
+3. **`Super+Shift+T` for Center**
+
+   Also currently free and strongly associated with terminal/window layout, but less convenient than `Super+Z`.
+
+4. **Three-state `Super+T`**
+
+   Technically possible:
+
+   `tiled → ordinary floating → centered floating → tiled`
+
+   I do not recommend it. Lua would need tags or geometry checks to distinguish two floating modes, dialogs would create edge cases, and reaching the desired state might require multiple presses. That reproduces the state-dependent behavior you disliked.
+
+My recommendation is option 1: treat **centered floating as your preferred floating mode**. We could reserve `Super+Shift+T` for ordinary unconstrained floating later if you discover you need it.
+
+Time: 2026-08-27 08:04:56
+--- Next Prompt ---
+
+Let's go with option 2 and have `Super+Z` always float, resize. 
+
+Time: 2026-08-27 08:12:06
+--- Codex Run ---
+
+Codex output:
+I’ll implement this as two independent behaviors: a Ghostty-specific startup rule and a deterministic `Super+Z` action for the active window. The action will always set floating, apply the same monitor-relative size, and center, without toggling any state.
+The active monitor API reports physical pixels, so the Lua action must divide by display scale before resizing; otherwise it would request a window twice as large on this 2× display. I’m also keeping the Ghostty rule monitor-relative, so it remains correct on another display.
+I’m editing only the stowed Quattro override in `bindings.lua`. It will add the Ghostty startup rule, an idempotent active-window centering function, and the `Super+Z` binding; Quattro’s `Super+T` and `Super+C` remain unchanged.
+The file is syntactically valid and the active config is symlinked to this repository. I’m reloading Hyprland now, then I’ll verify that the rule and binding registered cleanly before testing the resize against the current terminal.
+Hyprland accepted the reloaded Lua with no configuration errors. Its `binds` IPC query is currently timing out on this session, so I’m validating the same callback path directly through Hyprland’s Lua REPL and then checking the resulting window geometry.
+The runtime test produced the intended geometry exactly: the active window is floating at `960×1176`, positioned at `x=480, y=12` on the 1920×1200 logical screen. That is horizontally centered with the existing 12-pixel vertical margin, and repeating the action will apply the same values.
+Implemented in [bindings.lua](/home/cinmay/Documents/dotfiles/omarchy/.config/hypr/bindings.lua:4).
+
+- Ghostty now defaults to centered `50% × 98%`.
+- `Super+Z` floats, resizes, and centers any active window.
+- `Super+C` and `Super+T` remain unchanged.
+- Hyprland was reloaded successfully.
+
+Runtime verification produced `960×1176` at `x=480, y=12`, exactly centered on the current display. Lua syntax and the targeted diff check passed.
+
+Time: 2026-08-27 08:12:06
+--- Next Prompt ---
 
