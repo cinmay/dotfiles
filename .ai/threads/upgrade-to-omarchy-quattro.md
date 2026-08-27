@@ -1285,3 +1285,18 @@ Runtime verification produced `960×1176` at `x=480, y=12`, exactly centered on 
 Time: 2026-08-27 08:12:06
 --- Next Prompt ---
 
+Let's make it a little wider. Perhaps closer to what I had originally.
+
+Time: 2026-08-27 08:33:20
+--- Codex Run ---
+
+Codex output:
+I’ll move the target from 50% to 60% of the monitor width. On this display that changes the centered window from 960 to 1152 logical pixels, still substantially narrower than the old 70% configuration.
+The current active Ghostty window is still at the 50% geometry, so after changing the shared ratio I’ll reload Hyprland and apply the new centering action once to verify the result.
+Changed the centered width from 50% to **60%** in [bindings.lua](/home/cinmay/Documents/dotfiles/omarchy/.config/hypr/bindings.lua:4).
+
+The target is now `1152×1176` on your display. Hyprland reloaded successfully; `Super+Z` applies the new size, and new Ghostty windows will use it by default.
+
+Time: 2026-08-27 08:33:20
+--- Next Prompt ---
+

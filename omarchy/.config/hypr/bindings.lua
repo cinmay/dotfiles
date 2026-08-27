@@ -1,7 +1,7 @@
 local home = os.getenv("HOME") or ""
 local user_bin = home .. "/.local/bin/"
 local tts_control = home .. "/.config/nvim/scripts/nvim-tts-control media-toggle"
-local centered_window_width_ratio = 0.5
+local centered_window_width_ratio = 0.6
 local centered_window_height_ratio = 0.98
 
 o.window("^com\\.mitchellh\\.ghostty$", {
