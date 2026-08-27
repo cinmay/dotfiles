@@ -1300,3 +1300,88 @@ The target is now `1152×1176` on your display. Hyprland reloaded successfully; 
 Time: 2026-08-27 08:33:20
 --- Next Prompt ---
 
+Next, the screen flicking in Google Chrome is back. I seem to remember that it had something to do with the internal GPU and the external GPU baaing used at the same time?
+Investigating the issue and see if you can find a solution. Let me know what you find before we implement any changes. 
+
+Time: 2026-08-27 08:42:15
+--- Codex Run ---
+
+Codex output:
+I’ll trace this from three directions: your current hybrid-GPU routing, Chrome’s active graphics backend and flags, and any previous workaround in the dotfiles history. I’ll compare that with current Hyprland, Chromium, and NVIDIA guidance, then report options without modifying anything.
+The first pass already found a strong lead: your repository has a prior commit explicitly named `Fix: Chrome flickering`. The laptop is currently loading both Intel and NVIDIA kernel stacks, while `nvidia-smi` cannot communicate with the NVIDIA driver, so I’m checking whether that is runtime suspension or a driver/userspace version mismatch before drawing conclusions.
+The old fix is now confirmed: it disabled Omarchy’s global `LIBVA_DRIVER_NAME=nvidia` and `__GLX_VENDOR_LIBRARY_NAME=nvidia` exports. Quattro’s new hardware defaults automatically export both again, while Chrome’s saved GPU profile identifies its renderer as Intel Iris Xe, making mixed Intel rendering plus NVIDIA video/GL routing the leading explanation.
+Hyprland itself is not doing multi-GPU rendering here. Its startup log rejects the NVIDIA card as non-KMS, selects only the Intel `i915` card, and creates the compositor renderer on Intel `renderD129`. The conflict is therefore more likely inside Chrome’s inherited graphics/video environment than in Hyprland’s monitor path.
+This is also a current upstream Omarchy regression, not just a historical quirk in your setup. Omarchy issues filed this week describe the same 4.0.1 behavior on Intel/NVIDIA hybrid laptops, including the same XPS 15 9520, RTX 3050 Ti, kernel, Mesa, and Hyprland versions.
+**Finding**
+
+I found the likely cause with high confidence. It is related to both GPUs, but Hyprland itself is not using both:
+
+- Hyprland rejects the NVIDIA card as non-KMS and uses only Intel `i915` for the display and compositor.
+- Chrome’s stored graphics profile reports Intel Iris Xe through ANGLE/Mesa.
+- Omarchy Quattro 4.0.1 exports these globally from [nvidia.lua](/usr/share/omarchy/default/hypr/nvidia.lua:12):
+  - `LIBVA_DRIVER_NAME=nvidia`
+  - `NVD_BACKEND=direct`
+  - `__GLX_VENDOR_LIBRARY_NAME=nvidia`
+
+This likely makes Chrome render on Intel while decoding video on NVIDIA, passing frames between GPUs. That is a current Omarchy 4.0.1 regression with reports matching your XPS 15 9520 and RTX 3050 Ti almost exactly. The confirmed workaround is `LIBVA_DRIVER_NAME=iHD`. [Omarchy issue #8215](https://github.com/basecamp/omarchy/issues/8215), [corroborating issue #8328](https://github.com/basecamp/omarchy/issues/8328)
+
+The NVIDIA VA-API driver confirms that `LIBVA_DRIVER_NAME=nvidia` selects its NVIDIA decoder and that Chromium support requires a specific experimental configuration. [nvidia-vaapi-driver documentation](https://github.com/elFarto/nvidia-vaapi-driver#chrome)
+
+**Why It Returned**
+
+Your commit `4849f49`, named `Fix: Chrome flickering`, disabled:
+
+```text
+LIBVA_DRIVER_NAME=nvidia
+__GLX_VENDOR_LIBRARY_NAME=nvidia
+```
+
+That old configuration is now in [hyprland.conf](/home/cinmay/Documents/dotfiles/omarchy-obsolete/.config/hypr/hyprland.conf:24), so it no longer participates in the Quattro configuration. Quattro’s hardware detection consequently enabled the NVIDIA variables again.
+
+**Recommended Fix**
+
+Start with the minimal proven override:
+
+```lua
+hl.env("LIBVA_DRIVER_NAME", "iHD")
+```
+
+It must load after Omarchy’s defaults. This keeps Chrome’s rendering and video decoding on Intel while preserving hardware acceleration. The NVIDIA GPU remains available for CUDA, gaming, and explicitly offloaded applications.
+
+I would not initially:
+
+- Disable Chrome hardware acceleration.
+- Force XWayland.
+- Configure `AQ_DRM_DEVICES`; Hyprland already selects Intel correctly.
+- Remove NVIDIA packages.
+- Change `NVD_BACKEND`; it becomes irrelevant when the Intel VA driver is selected.
+
+We can leave `__GLX_VENDOR_LIBRARY_NAME=nvidia` unchanged initially because native-Wayland Chrome does not use GLX. Your old fix disabled it too, but it is not necessary for the minimal Chrome correction.
+
+The upstream issues remain open, and I found no merged Omarchy fix yet. No files or settings were changed.
+
+Time: 2026-08-27 08:42:15
+--- Next Prompt ---
+Ok, let's implement the fix. 
+
+Time: 2026-08-27 08:53:23
+--- Codex Run ---
+
+Codex output:
+I’ll add the proven Intel VA-API override to the stowed user configuration, after Omarchy’s defaults have loaded. I’ll keep the change limited to `LIBVA_DRIVER_NAME=iHD`, reload Hyprland, and verify the environment seen by newly launched applications.
+The active `autostart.lua` is already owned by this dotfiles package, so the override can stay in Git without taking ownership of Quattro’s main `hyprland.lua`. I’m placing it at the top because environment setup must happen before future application launches.
+The Lua parses cleanly and Hyprland accepted the reload. I’m now checking both Hyprland’s own environment and the environment inherited by a newly dispatched process, which is the path used by application keybindings.
+The Intel VA-API override is in place and Hyprland is already reading `iHD`. I’m checking how Quattro imports that value into its user service environment so the fix also applies to Chrome when it is launched through Omarchy, not only to direct Hyprland processes.
+Quattro’s browser launcher runs Chrome as a transient systemd user service. The config override is correct for future logins because Omarchy imports Hyprland’s final environment at session start; I found the current session still held the old `nvidia` value, so I’m synchronizing `iHD` into that service environment once now.
+Implemented the targeted workaround from [Omarchy issue #8215](https://github.com/basecamp/omarchy/issues/8215).
+
+[autostart.lua](/home/cinmay/Documents/dotfiles/omarchy/.config/hypr/autostart.lua:1) now forces VA-API decoding onto Intel using `LIBVA_DRIVER_NAME=iHD`. I also synchronized the current systemd/DBus environment, so Chrome should receive the fix on its next launch.
+
+Validation passed: Lua syntax, Hyprland reload, and `hyprctl configerrors`. Chrome was not running, so no restart was necessary.
+
+text
+2026-08-27T06:51:43.773367Z ERROR codex_core::tools::router: error=exec_command failed for `/usr/bin/zsh -lc "rm -f /tmp/codex-omarchy-systemd-env && hyprctl repl 'hl.exec_cmd(\"systemctl --user show-environment > /tmp/codex-omarchy-systemd-env\")' && for _ in {1..20}; do [[ -f /tmp/codex-omarchy-systemd-env ]] && break; sleep 0.1; done; rg '"'^(LIBVA_DRIVER_NAME|__GLX_VENDOR_LIBRARY_NAME|NVD_BACKEND)='"' /tmp/codex-omarchy-systemd-env || true; rm -f /tmp/codex-omarchy-systemd-env"`: CreateProcess { message: "Rejected(\"`/usr/bin/zsh -lc \\\"rm -f /tmp/codex-omarchy-systemd-env && hyprctl repl 'hl.exec_cmd(\\\\\\\"systemctl --user show-environment > /tmp/codex-omarchy-systemd-env\\\\\\\")' && for _ in {1..20}; do [[ -f /tmp/codex-omarchy-systemd-env ]] && break; sleep 0.1; done; rg '\\\"'^(LIBVA_DRIVER_NAME|__GLX_VENDOR_LIBRARY_NAME|NVD_BACKEND)='\\\"' /tmp/codex-omarchy-systemd-env || true; rm -f /tmp/codex-omarchy-systemd-env\\\"` rejected: rm -f style commands are not permitted. Use a safer approach\")" }
+
+Time: 2026-08-27 08:53:23
+--- Next Prompt ---
+

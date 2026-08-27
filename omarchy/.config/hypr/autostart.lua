@@ -1,3 +1,6 @@
+-- Keep VA-API decode on the Intel GPU that drives this hybrid laptop's display.
+hl.env("LIBVA_DRIVER_NAME", "iHD")
+
 local workspaces = {
   { id = 1, name = "home" },
   { id = 6, name = "terminal" },
