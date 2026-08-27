@@ -87,20 +87,16 @@ move_to_music_workspace() {
 move_into_group() {
   local moving_address="$1"
   local group_address="$2"
-  local direction
 
   move_to_music_workspace "$moving_address"
   focus_window "$group_address"
   ensure_group "$group_address"
-  focus_window "$moving_address"
 
-  for direction in l r u d; do
-    "$hypr_dispatch" move-into-group "$direction" >/dev/null || true
-    if is_grouped "$moving_address"; then
-      lock_group "$moving_address"
-      return 0
-    fi
-  done
+  "$hypr_dispatch" group-add "$group_address" "$moving_address" >/dev/null || true
+  if is_grouped "$moving_address"; then
+    lock_group "$moving_address"
+    return 0
+  fi
 
   lock_group "$group_address"
   return 1
