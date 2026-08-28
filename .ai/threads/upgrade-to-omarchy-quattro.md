@@ -1436,4 +1436,25 @@ The bar should hot-reload automatically. This global override survives theme cha
 
 Time: 2026-08-28 21:33:25
 --- Next Prompt ---
+That didn't work. The bar is still fully opaque.
+
+Time: 2026-08-28 21:43:20
+--- Codex Run ---
+
+Codex output:
+I’ll verify that the new override is active, then inspect the running shell’s parsed bar color. If the file is loaded but the surface remains opaque, the issue is likely Quickshell’s layer-surface rendering rather than Stow or the TOML value.
+The override is stowed correctly, so I’m narrowing this down to two things: whether the visible bar is Omarchy Shell’s bar, and whether the running shell reloaded a file that did not exist when it started. I’ll inspect the live layer and shell controls before changing the opacity value.
+The live layer is `omarchy-bar`, so this is the Quattro bar rather than an old Waybar process. The installed code supports alpha on that surface; the likely failure is its live file watcher not noticing the newly created Stow symlink, so I’m going to force a shell restart and then capture the bar for verification.
+The config is correct, but the running Omarchy Shell started before `~/.config/omarchy/shell.toml` was created and did not detect the new Stow symlink.
+
+Run:
+
+```bash
+omarchy restart shell
+```
+
+Afterward, the bar should use `background-alpha = 0.85`. I cannot safely issue the restart from this sandbox because it cannot access the user-session Quickshell socket. If it remains opaque after restarting, we’ll test with an unmistakable alpha value to isolate a Quattro rendering issue.
+
+Time: 2026-08-28 21:43:20
+--- Next Prompt ---
 
