@@ -1596,3 +1596,86 @@ Current effective opacity remains `0.8` until those commands run. Blur remains u
 Time: 2026-08-29 09:47:38
 --- Next Prompt ---
 
+Next, let's check the transparency in tmux. It seems like the tmux background sometimes looses its transparency and becomes opaque.
+
+Time: 2026-08-29 09:53:35
+--- Codex Run ---
+
+Codex output:
+I’ll trace every layer that can paint a tmux pane background: Ghostty’s cell-opacity behavior, Omarchy’s generated tmux theme, and your RMPC theme synchronization. The intermittent behavior usually means one of those paths is applying an explicit pane background after tmux starts.
+There are two competing tmux configurations. Quattro’s XDG config uses `bg=default`, which preserves Ghostty transparency, while the old stowed `~/.tmux.conf` still loads the Catppuccin plugin; that plugin can repaint styles after startup. I’m checking the live tmux server to confirm which configuration won.
+I found the intermittent cause.
+
+When a theme changes while the regular tmux server is running, Omarchy explicitly sets both pane styles to the theme background in [omarchy-theme-set-tmux](/usr/share/omarchy/bin/omarchy-theme-set-tmux:58). Ghostty keeps explicitly colored cells opaque, so the pane loses transparency. If no tmux server is running during the theme change, Omarchy skips that step and the next session remains transparent.
+
+There is also an obsolete [`.tmux.conf`](/home/cinmay/Documents/dotfiles/omarchy/.tmux.conf:1) still stowed at `~/.tmux.conf`. It takes precedence over Quattro’s XDG tmux configuration and references a Catppuccin plugin that no longer exists.
+
+My recommended fix is:
+
+1. Extend your existing theme hook to restore `window-style` and `window-active-style` to `fg=default,bg=default` after Omarchy synchronizes the theme.
+2. Move the obsolete `.tmux.conf` into `omarchy-obsolete` and remove its home symlink.
+3. Keep Ghostty’s `background-opacity-cells = false`; changing that would make Neovim and other explicitly styled interfaces transparent too.
+
+One distinction before I edit it: does the **entire tmux pane** become opaque, or only the **tmux status line**? The RMPC music server intentionally gives its status line an opaque theme background, which would need a separate adjustment.
+
+Time: 2026-08-29 09:53:35
+--- Next Prompt ---
+
+Before we move on, should we migrate the `~/.tmux.conf` to the new Quattro XDG configuration? 
+
+Time: 2026-08-29 09:57:01
+--- Codex Run ---
+
+Codex output:
+Yes, but we should **not copy the old file into the XDG config wholesale**.
+
+The old `~/.tmux.conf` contains:
+
+- A Catppuccin plugin reference that no longer exists: discard.
+- `mouse on`: already provided by Quattro.
+- An empty `status-right`: the only customization worth deciding whether to preserve.
+
+Recommended migration:
+
+1. Manage `~/.config/tmux/tmux.conf` through the `omarchy` Stow package.
+2. Base it on the latest Quattro config from `/usr/share/omarchy/config/tmux/tmux.conf`.
+3. Preserve any intentional customizations, including your OSC 52 support.
+4. Move the old `.tmux.conf` into `omarchy-obsolete` and remove its symlink.
+5. Add the transparency correction to your theme hook.
+
+This migration alone will not fix the intermittent opacity; Omarchy’s theme synchronizer would still assign an explicit pane background. The hook remains necessary.
+
+The only preference to settle is `status-right`: keep Quattro’s COPY/PREFIX/ZOOM/hostname indicators, remove it entirely as before, or retain only the useful state indicators without the hostname. I recommend the last option.
+
+Time: 2026-08-29 09:57:01
+--- Next Prompt ---
+
+Ok, let's remove the old `~/.tmux.conf`. Then I can see what Omarchy's default tmux configuration looks like and we can decide if we need to make any changes.
+Make sure that we don't break the wls tmux configuration if they are coupled. 
+
+Time: 2026-08-29 10:02:40
+--- Codex Run ---
+
+Codex output:
+I’ll first map every tmux file and Stow package in the repository so the Linux removal does not touch any WSL-owned configuration. Then I’ll archive only Omarchy’s legacy root config and verify that tmux will fall through to Quattro’s existing XDG config.
+The configurations are not coupled: `omarchy/.tmux.conf` and `wsl/.tmux.conf` are separate files in separate Stow packages, and WSL sources its own Catppuccin theme file. I’m archiving only the Omarchy copy; the `wsl` package will remain byte-for-byte unchanged.
+The repository move is complete. The sandbox cannot unlink the home-directory symlink itself, so it is currently dangling; that is enough for tmux to treat `~/.tmux.conf` as absent and discover `~/.config/tmux/tmux.conf`, but I’ll verify the Stow state and WSL file before giving you the one cleanup command.
+Removed the Omarchy legacy `.tmux.conf` and archived it at [omarchy-obsolete/.tmux.conf](/home/cinmay/Documents/dotfiles/omarchy-obsolete/.tmux.conf). The separate [WSL configuration](/home/cinmay/Documents/dotfiles/wsl/.tmux.conf) is unchanged and independent.
+
+The sandbox could not remove the now-dangling home symlink. Run:
+
+```bash
+unlink ~/.tmux.conf
+```
+
+For an already-running tmux server, load Quattro’s XDG config immediately with:
+
+```bash
+tmux source-file ~/.config/tmux/tmux.conf
+```
+
+New tmux servers will automatically use the XDG configuration. No changes were made to it yet.
+
+Time: 2026-08-29 10:02:40
+--- Next Prompt ---
+
