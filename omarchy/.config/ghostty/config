@@ -1,9 +1,11 @@
-# Dynamic theme colors
-config-file = ?"~/.local/state/omarchy/current/theme/ghostty.conf"
-
 # Background
+# Fallback for themes without a generated light/dark mode.
 background-opacity = 0.8
 background-blur = true
+
+# Dynamic theme colors and mode-specific opacity
+config-file = ?"~/.local/state/omarchy/current/theme/ghostty.conf"
+config-file = ?"~/.local/state/omarchy/current/theme/ghostty-opacity.conf"
 
 # Font
 font-family = "CaskaydiaMono Nerd Font"
@@ -12,6 +14,7 @@ font-style = Regular
 font-size = 9
 
 # Window
+window-theme = ghostty
 window-padding-x = 14
 window-padding-y = 14
 confirm-close-surface=false

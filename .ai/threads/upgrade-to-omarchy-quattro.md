@@ -1458,3 +1458,141 @@ Afterward, the bar should use `background-alpha = 0.85`. I cannot safely issue t
 Time: 2026-08-28 21:43:20
 --- Next Prompt ---
 
+
+Next the transparency in the terminal, Ghostty, looks wrong. It makes the background image look completely over exposed in light mode.  
+Do some research and find out what the current settings are for Ghostty and what the recommended settings are for a good looking transparency.
+Dark mode looks gorgeous.
+
+Time: 2026-08-29 09:38:06
+--- Codex Run ---
+
+Codex output:
+I’ll trace how Ghostty’s opacity is assembled from your dotfiles, Omarchy’s generated theme file, and Ghostty’s own defaults. Then I’ll compare that with the current Ghostty guidance, focusing on why the same alpha behaves differently with light and dark terminal backgrounds.
+The current active terminal palette is Catppuccin Latte: Ghostty paints `#eff1f5` at 80% opacity over the wallpaper, with blur enabled. That combination explains the washed-out light appearance; the dark palette benefits from the same blending, but a near-white translucent layer lifts the wallpaper’s highlights and reduces separation.
+There is a second compositor effect: Quattro applies `0.985` opacity to active windows and `0.96` to inactive ones, while Hyprland blur is disabled. Ghostty’s own `background-blur = true` therefore has no supported blur backend on Hyprland, so the light background is being blended without the softening that setting implies.
+**Current State**
+
+Ghostty 1.3.1 is effectively using:
+
+- Active theme: Catppuccin Latte
+- Background: `#eff1f5`
+- Foreground: `#4c4f69`
+- `background-opacity = 0.8`
+- `background-blur = true`
+- `background-opacity-cells = false` by default
+- `minimum-contrast = 1` by default
+- Hyprland additionally multiplies active/inactive window opacity by `0.985`/`0.96`
+
+The opacity and blur overrides come from [config](/home/cinmay/Documents/dotfiles/omarchy/.config/ghostty/config:5). Quattro’s stock Ghostty configuration is opaque and does not enable blur.
+
+Your Aether light theme is even brighter: `#fefaf5`. Blending that at 80% over a wallpaper inevitably creates a milky, overexposed effect. The dark theme uses `#010112`, where the same blending produces depth instead.
+
+Ghostty documents `background-opacity` as the background alpha. It also says Ghostty’s application-controlled blur is unsupported on Linux environments other than those implementing the appropriate protocol, such as KDE. Hyprland has its own compositor blur, but Omarchy currently disables it. [Ghostty option reference](https://ghostty.org/docs/config/reference?from=20421&from_column=20421), [Hyprland blur reference](https://wiki.hypr.land/Configuring/Basics/Variables/).
+
+**Recommendation**
+
+Use mode-dependent opacity:
+
+```text
+Dark themes:  0.80
+Light themes: 0.94
+```
+
+I would start light mode at `0.94`; `0.92–0.96` is the useful tuning range. This leaves a subtle hint of wallpaper without letting a near-white terminal wash it out.
+
+I would also:
+
+- Remove or disable `background-blur = true`, because it currently has no visual effect.
+- Keep `background-opacity-cells = false`, preserving opaque Neovim/TUI backgrounds where applications explicitly paint cells. [Ghostty documentation](https://ghostty.org/docs/config/reference?from=20421&from_column=20421)
+- Keep `minimum-contrast = 1` initially. Raising it can alter theme colors and cannot account for the wallpaper behind the compositor.
+- Restore Quattro’s `window-theme = ghostty`, which is missing from your older config.
+
+The clean implementation is an Omarchy Ghostty template that selects an opacity profile from the generated `mode = "light"` or `mode = "dark"` value. That keeps the Aether themes untouched and automatically applies the right opacity whenever you switch themes.
+
+No changes made yet.
+
+Time: 2026-08-29 09:38:06
+--- Next Prompt ---
+
+Ok. Let's implement the recommended changes. But don't change the blur setting. No need to specifically disable it if it's not doing anything.
+
+Time: 2026-08-29 09:44:14
+--- Codex Run ---
+
+Codex output:
+I’ll implement this as a mode-aware generated include, leaving Omarchy’s stock Ghostty theme template untouched. Dark mode will retain `0.80` as the fallback, light mode will override it to `0.94`, and `window-theme = ghostty` will be restored without changing `background-blur`.
+I’m making three scoped changes: add light/dark opacity profiles, add a small Omarchy template that selects the profile from `colors.toml`’s generated `mode`, and update Ghostty to load that generated selector. The existing `background-blur = true` line stays exactly as-is.
+The configuration is now arranged so the dark value is only a fallback and the generated mode profile loads last, which is required for Ghostty’s override order. I’m testing both a light and dark Omarchy generation in isolated temporary homes before checking Stow ownership.
+Both isolated generations passed: light resolves to `0.94`, dark to `0.80`, `window-theme` resolves correctly, and blur remains enabled. The Stow dry run is conflict-free; I’m applying the three new links now, after which the current theme must be regenerated once so its mode selector exists.
+Implemented mode-aware Ghostty transparency:
+
+- Dark mode: `0.80`
+- Light mode: `0.94`
+- Restored `window-theme = ghostty`
+- Left `background-blur = true` unchanged
+- Kept stock Omarchy theme generation intact
+
+The isolated generation test passed for both modes. Run these commands to activate the new files:
+
+```bash
+stow -t "$HOME" omarchy
+omarchy theme set "$(omarchy theme current)"
+```
+
+The second command regenerates Ghostty’s current theme configuration and restarts the terminal.
+
+text
+2026-08-29T07:43:24.964897Z ERROR codex_core::tools::router: error=exec_command failed for `/usr/bin/zsh -lc 'set -e
+for mode in light dark; do
+  test_home=$(mktemp -d)
+  mkdir -p "$test_home/.config/omarchy/themed"
+  mkdir -p "$test_home/.config/ghostty"
+  mkdir -p "$test_home/.local/state/omarchy/current/next-theme"
+
+  if [[ $mode == light ]]; then
+    cp /home/cinmay/.local/state/omarchy/current/theme/colors.toml "$test_home/.local/state/omarchy/current/next-theme/colors.toml"
+  else
+    cp /home/cinmay/.config/omarchy/themes/regnconanimedragonsdarkmode/colors.toml "$test_home/.local/state/omarchy/current/next-theme/colors.toml"
+  fi
+
+  cp omarchy/.config/omarchy/themed/ghostty-opacity.conf.tpl "$test_home/.config/omarchy/themed/"
+  cp omarchy/.config/ghostty/config "$test_home/.config/ghostty/"
+  cp omarchy/.config/ghostty/opacity-dark.conf "$test_home/.config/ghostty/"
+  cp omarchy/.config/ghostty/opacity-light.conf "$test_home/.config/ghostty/"
+
+  HOME="$test_home" OMARCHY_PATH=/usr/share/omarchy /usr/share/omarchy/bin/omarchy-theme-set-templates
+  ln -s next-theme "$test_home/.local/state/omarchy/current/theme"
+
+  printf '"'%s: ' \""'$mode"
+  HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" ghostty +show-config |
+    rg '"'"'^(background-opacity|background-blur|window-theme)'"' |
+    tr '\\n' ' '
+  printf '\\n'
+
+  rm -rf \""'$test_home"
+done'`: CreateProcess { message: "Rejected(\"`/usr/bin/zsh -lc 'set -e\\nfor mode in light dark; do\\n  test_home=$(mktemp -d)\\n  mkdir -p \\\"$test_home/.config/omarchy/themed\\\"\\n  mkdir -p \\\"$test_home/.config/ghostty\\\"\\n  mkdir -p \\\"$test_home/.local/state/omarchy/current/next-theme\\\"\\n\\n  if [[ $mode == light ]]; then\\n    cp /home/cinmay/.local/state/omarchy/current/theme/colors.toml \\\"$test_home/.local/state/omarchy/current/next-theme/colors.toml\\\"\\n  else\\n    cp /home/cinmay/.config/omarchy/themes/regnconanimedragonsdarkmode/colors.toml \\\"$test_home/.local/state/omarchy/current/next-theme/colors.toml\\\"\\n  fi\\n\\n  cp omarchy/.config/omarchy/themed/ghostty-opacity.conf.tpl \\\"$test_home/.config/omarchy/themed/\\\"\\n  cp omarchy/.config/ghostty/config \\\"$test_home/.config/ghostty/\\\"\\n  cp omarchy/.config/ghostty/opacity-dark.conf \\\"$test_home/.config/ghostty/\\\"\\n  cp omarchy/.config/ghostty/opacity-light.conf \\\"$test_home/.config/ghostty/\\\"\\n\\n  HOME=\\\"$test_home\\\" OMARCHY_PATH=/usr/share/omarchy /usr/share/omarchy/bin/omarchy-theme-set-templates\\n  ln -s next-theme \\\"$test_home/.local/state/omarchy/current/theme\\\"\\n\\n  printf '\\\"'%s: ' \\\\\\\"\\\"'$mode\\\"\\n  HOME=\\\"$test_home\\\" XDG_CONFIG_HOME=\\\"$test_home/.config\\\" ghostty +show-config |\\n    rg '\\\"'\\\"'^(background-opacity|background-blur|window-theme)'\\\"' |\\n    tr '\\\\\\\\n' ' '\\n  printf '\\\\\\\\n'\\n\\n  rm -rf \\\\\\\"\\\"'$test_home\\\"\\ndone'` rejected: rm -f style commands are not permitted. Use a safer approach\")" }
+
+Time: 2026-08-29 09:44:14
+--- Next Prompt ---
+
+It looks like you had some issues. Are you done with the implementation? If not, then please continue. 
+
+Time: 2026-08-29 09:47:38
+--- Codex Run ---
+
+Codex output:
+The code implementation is complete, but activation previously stopped at the sandbox’s read-only boundary when Stow tried to create links under your home directory. I’ll check whether those links and the generated mode file now exist, then finish any remaining repository work.
+The repository implementation is complete and both light/dark generation tests passed. The active setup is **not yet applied** because this sandbox cannot create the three new Stow links under `$HOME`.
+
+Run:
+
+```bash
+stow -t "$HOME" omarchy
+omarchy theme set "$(omarchy theme current)"
+```
+
+Current effective opacity remains `0.8` until those commands run. Blur remains unchanged. Afterward I can verify that light mode resolves to `0.94`.
+
+Time: 2026-08-29 09:47:38
+--- Next Prompt ---
+
