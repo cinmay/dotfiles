@@ -1,14 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-theme_file="${1:-$HOME/.config/omarchy/current/theme/ghostty.conf}"
+theme_file="${1:-${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/current/theme/ghostty.conf}"
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/rmpc"
-script_dir="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd)"
-quality_script="$HOME/.local/bin/music-system-quality.sh"
-
-if [[ ! -x "$quality_script" ]]; then
-  quality_script="$script_dir/music-system-quality.sh"
-fi
 
 mkdir -p "$cache_dir"
 
@@ -91,23 +85,4 @@ cat > "$cache_dir/theme.ron" <<EOF
         trace: (fg: "$secondary", bg: "$background"),
     ),
 )
-EOF
-
-cat > "$cache_dir/tmux.conf" <<EOF
-set -g status on
-set -g status-position bottom
-set -g status-interval 2
-set -g status-style "bg=$background,fg=$foreground"
-set -g status-left "#[fg=$primary,bold] rmpc #[fg=$dim]#{session_name} "
-set -g status-right "#[fg=$secondary,bold]#($quality_script) "
-set -g message-style "bg=$background,fg=$foreground"
-set -g mode-style "bg=$primary,fg=$background"
-set -g pane-active-border-style "fg=$secondary"
-set -g pane-border-style "fg=$border"
-set -g window-status-current-style "fg=$background,bg=$primary,bold"
-set -g window-status-style "fg=$foreground,bg=$background"
-set -g allow-passthrough on
-set -g mouse on
-set -g escape-time 10
-set -ga terminal-overrides ",xterm-ghostty:RGB"
 EOF
