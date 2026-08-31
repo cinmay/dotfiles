@@ -2,7 +2,5 @@
 
 set -euo pipefail
 
-export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
-
-nohup /usr/bin/chatgpt --ozone-platform=wayland "$@" \
+nohup /usr/bin/chatgpt "$@" \
   </dev/null >/dev/null 2>&1 &
