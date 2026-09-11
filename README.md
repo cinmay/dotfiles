@@ -71,6 +71,35 @@ stow -t "$HOME" omarchy
 stow -t "$HOME" wsl
 ```
 
+#### ChatGPT blank window with `[WARN:COPY MODE]`
+
+This title comes from WSLg. Check its Windows display connection:
+
+```bash
+rg 'rdp_allocate_shared_memory|use_gfxredir' /mnt/wslg/weston.log
+```
+
+A shared-memory `Input/output error` followed by `use_gfxredir = 0` matches
+[this WSL bug](https://github.com/microsoft/openvmm/issues/4274). Changing
+ChatGPT's Wayland/X11 flags does not repair that connection; even an internal
+app screenshot can look normal while the Windows window stays blank.
+
+Save work and stop background jobs first: the following command terminates
+**all WSL distributions**, including tmux sessions. Run it in **Windows PowerShell**:
+
+```powershell
+wsl --shutdown
+```
+
+Reopen Ubuntu, run `chatgpt`, and check that the new Weston log reports
+`use_gfxredir = 1`. Restarting just ChatGPT or terminating only Ubuntu may not
+clear the faulty VM state.
+
+As of 2026-09-11, the [upstream fix](https://github.com/microsoft/WSL/pull/41499)
+is included in [WSL 2.9.10 preview](https://github.com/microsoft/WSL/releases/tag/2.9.10),
+but stable 2.7.13 still uses the older DeviceHost component. Installing the
+preview is a separate choice; `wsl --update --pre-release` opts into that channel.
+
 ## Install Neovim
 
 https://github.com/neovim/neovim/wiki/Installing-Neovim#install-from-source
