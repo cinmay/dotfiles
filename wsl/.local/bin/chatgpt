@@ -2,5 +2,9 @@
 
 set -euo pipefail
 
-nohup /usr/bin/chatgpt "$@" \
+# WSLg exposes the Wayland socket under this runtime directory.  Selecting it
+# explicitly avoids Electron opening an unrendered window through auto-detect.
+export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
+
+nohup /usr/bin/chatgpt --ozone-platform=wayland "$@" \
   </dev/null >/dev/null 2>&1 &
