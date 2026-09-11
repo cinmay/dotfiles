@@ -2075,4 +2075,74 @@ text
 
 Time: 2026-08-31 18:44:18
 --- Next Prompt ---
+Ok, is there anything else we need to get rid of?
+
+Time: 2026-08-31 18:53:35
+--- Codex Run ---
+
+Codex output:
+I’ll do a final cleanup audit rather than infer from filenames: check active references, dangling Stow links, obsolete Quattro-era paths, runtime cache/socket leftovers, and the current Git diff. I will not remove anything during this pass.
+The music cleanup itself is complete, but the broader audit found one definite dangling workaround link and one active Quattro migration issue outside music: Neovim still references the pre-Quattro theme path. I’m verifying whether the old `~/.local/share/omarchy` compatibility link is intentionally required before classifying it for removal.
+The music-specific tmux cleanup is complete. I found one remaining item that should be removed now:
+
+- `~/.local/bin/omarchy-theme-set-tmux` is a dangling symlink to a deleted workaround script.
+
+Two other items need migration before removal:
+
+- Neovim still references the obsolete theme path in [theme.lua](/home/cinmay/Documents/dotfiles/omarchy/.config/nvim/lua/plugins/theme.lua:1) and [omarchy_theme.lua](/home/cinmay/Documents/dotfiles/omarchy/.config/nvim/lua/custom/omarchy_theme.lua:3). It should use `~/.local/state/omarchy/current/theme/neovim.lua`.
+- [.XCompose](/home/cinmay/Documents/dotfiles/omarchy/.XCompose:1) still relies on the compatibility symlink `~/.local/share/omarchy`. We should change its include to `/usr/share/omarchy/default/xcompose`, then remove that compatibility symlink.
+
+There are also timestamped Quattro upgrade backups under `~/.config`. They do not interfere with the running configuration and can be archived or deleted later.
+
+The Aether-generated theme files and Chrome/Codex singleton links should remain. I made no changes during this audit. I recommend removing the dangling script and migrating the Neovim theme paths next.
+
+Time: 2026-08-31 18:53:35
+--- Next Prompt ---
+
+
+Let me know if there are any commands I need to run.
+
+Also, there was just a software update and I got this when I tried to run stow:
+```bash 
+ dotfiles git:(main) ✗ stow -t "$HOME" omarchy
+
+WARNING! stowing omarchy would cause conflicts:
+  * cannot stow Documents/dotfiles/omarchy/.XCompose over existing target .XCompose since neither a link nor a directory and --adopt not specified
+All operations aborted.
+ ```
+
+
+
+
+Time: 2026-09-01 11:04:00
+--- Codex Run ---
+
+Codex output:
+I’ll compare the repository’s `.XCompose` with the file now installed in your home directory, then check Stow ownership and the current Omarchy migration pattern. This will tell us whether the update restored an upstream file or replaced one of our links.
+The update changed only one line: it replaced the legacy `~/.local/share/omarchy/default/xcompose` include with `/usr/share/omarchy/default/xcompose`. Because `.XCompose` was a Stow symlink, the updater’s in-place replacement turned the home link into a regular file; the repository copy was left unchanged, which is why Stow now conflicts.
+I’ll bring the tracked `.XCompose` forward to the new packaged path and also fix the two confirmed Neovim theme paths from the earlier audit. After that, only home-directory link cleanup remains, so I’ll give you one exact command block to run before Stow.
+The tracked `.XCompose` now exactly matches the updater-generated file, including your custom compose sequences, so removing the home copy will not lose anything. I also confirmed that nothing active still references `~/.local/share/omarchy`, making that legacy compatibility symlink safe to remove.
+The update ran an Omarchy migration using `sed -i`, which replaced the Stow symlink with a regular `.XCompose` file. I updated the repository copy to match the new `/usr/share/omarchy/default/xcompose` path and migrated both Neovim theme references to Quattro’s XDG state path.
+
+Run:
+
+```bash
+rm -f "$HOME/.XCompose"
+rm -f "$HOME/.local/bin/omarchy-theme-set-tmux"
+rm -f "$HOME/.local/share/omarchy"
+
+cd "$HOME/Documents/dotfiles"
+stow -t "$HOME" omarchy
+```
+
+This removes:
+
+- The updater-created `.XCompose` copy, allowing Stow to restore its symlink.
+- The dangling tmux workaround symlink.
+- The obsolete Omarchy 3 compatibility symlink.
+
+Your `.XCompose` content was verified identical before removal. No Omarchy reload is required. Restart existing Neovim instances so they load the corrected theme path.
+
+Time: 2026-09-01 11:04:00
+--- Next Prompt ---
 
