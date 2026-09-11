@@ -239,6 +239,8 @@ vim.keymap.set("n", "<C-k>", "<C-w><C-k>", { desc = "Move focus to the upper win
 
 -- [[ My keymaps ]]
 
+vim.keymap.set("n", "G", "Gzz", { desc = "Go to line and center cursor" })
+
 -- Toggles
 vim.keymap.set("n", "<leader>ta", ":ASToggle<CR>", { desc = "toggle auto save" })
 

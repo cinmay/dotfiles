@@ -7,7 +7,7 @@ youtube_class="com.cinmay.youtube-music"
 youtube_url="https://music.youtube.com"
 script_dir="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd)"
 hypr_dispatch="$script_dir/hypr-lua-dispatch"
-rmpc_launcher="$script_dir/rmpc-music-session.sh"
+rmpc_launcher="$script_dir/rmpc-music.sh"
 
 clients() {
   hyprctl -j clients
