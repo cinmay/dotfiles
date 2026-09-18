@@ -17,10 +17,13 @@ function M.new(reply, find_item, changed)
 				request.resolved = true
 				table.remove(self.queue, i)
 				if i == 1 then
+					local was_visible = win and vim.api.nvim_win_is_valid(win)
 					close()
-					vim.schedule(function()
-						self:show()
-					end)
+					if was_visible then
+						vim.schedule(function()
+							self:show()
+						end)
+					end
 				end
 				changed()
 				return
@@ -213,7 +216,7 @@ function M.new(reply, find_item, changed)
 		end
 		table.insert(self.queue, request)
 		changed()
-		self:show()
+		vim.notify("Codex needs your response · <leader>ap", vim.log.levels.INFO)
 	end
 
 	return requests

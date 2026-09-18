@@ -9,6 +9,9 @@ local state = { items = {}, item_index = {}, status = "Ready", busy = false }
 local client, requests, timer
 local history_buf, prompt_buf, history_win, prompt_win
 local render_pending = false
+local return_state, history_view, prompt_view
+local changing_layout = false
+local drafts = {}
 
 local function notify(message, level)
 	vim.notify("Codex: " .. message, level or vim.log.levels.INFO)
@@ -35,16 +38,16 @@ local function title()
 		elapsed = math.floor((vim.uv.hrtime() - state.started) / 1e9)
 	end
 	local status = requests and #requests.queue > 0 and "Response required" or state.status
-	vim.api.nvim_win_set_config(history_win, {
-		title = string.format(
+	vim.wo[history_win].winbar = string
+		.format(
 			" Codex · %s · %s · %s · %02d:%02d ",
 			state.model or "loading model",
 			state.effort or "default effort",
 			status,
 			math.floor(elapsed / 60),
 			elapsed % 60
-		),
-	})
+		)
+		:gsub("%%", "%%%%")
 end
 
 local function find_item(turn_id, item_id)
@@ -238,14 +241,76 @@ local function prompt_text()
 	return table.concat(vim.api.nvim_buf_get_lines(prompt_buf, 0, -1, false), "\n")
 end
 
+local function remember_views()
+	if valid(history_win) and vim.api.nvim_win_get_buf(history_win) == history_buf then
+		history_view = vim.api.nvim_win_call(history_win, vim.fn.winsaveview)
+	end
+	if valid(prompt_win) and vim.api.nvim_win_get_buf(prompt_win) == prompt_buf then
+		prompt_view = vim.api.nvim_win_call(prompt_win, vim.fn.winsaveview)
+	end
+end
+
+local function restore_views()
+	if valid(history_win) and history_view then
+		vim.api.nvim_win_call(history_win, function()
+			vim.fn.winrestview(history_view)
+		end)
+	end
+	if valid(prompt_win) and prompt_view then
+		vim.api.nvim_win_call(prompt_win, function()
+			vim.fn.winrestview(prompt_view)
+		end)
+	end
+end
+
+-- When :q closes one Codex window, its sibling becomes the code window.
+-- Let the original :q finish normally instead of mapping or replacing the command.
+local function leave_view(keep, restore_buffer, quitting)
+	changing_layout = true
+	remember_views()
+	local old_history, old_prompt = history_win, prompt_win
+	history_win, prompt_win = nil, nil
+	if valid(keep) then
+		if restore_buffer then
+			local buf = return_state and return_state.buf
+			if not buf or not vim.api.nvim_buf_is_valid(buf) then
+				buf = vim.api.nvim_create_buf(true, false)
+			end
+			vim.api.nvim_win_set_buf(keep, buf)
+		end
+		if return_state then
+			for option, value in pairs(return_state.options) do
+				vim.wo[keep][option] = value
+			end
+			if restore_buffer then
+				vim.api.nvim_win_call(keep, function()
+					vim.fn.winrestview(return_state.view)
+				end)
+			end
+		end
+	end
+	for _, win in ipairs({ old_prompt, old_history }) do
+		if valid(win) and win ~= keep and win ~= quitting then
+			vim.api.nvim_win_close(win, true)
+		end
+	end
+	if not quitting and valid(keep) then
+		vim.api.nvim_set_current_win(keep)
+	end
+	changing_layout = false
+end
+
 function M.hide()
-	if valid(prompt_win) then
-		vim.api.nvim_win_close(prompt_win, true)
+	if not history_win and not prompt_win then
+		return
 	end
-	if valid(history_win) then
-		vim.api.nvim_win_close(history_win, true)
-	end
-	prompt_win, history_win = nil, nil
+	local keep = valid(history_win) and history_win or prompt_win
+	leave_view(keep, true)
+end
+
+function M.is_buffer(buf)
+	buf = buf or vim.api.nvim_get_current_buf()
+	return buf == history_buf or buf == prompt_buf
 end
 
 local function show()
@@ -254,6 +319,7 @@ local function show()
 		return
 	end
 	M.hide()
+	changing_layout = true
 	for _, kind in ipairs({ "history", "prompt" }) do
 		local buf
 		if kind == "history" then
@@ -262,18 +328,10 @@ local function show()
 			buf = prompt_buf
 		end
 		if not buf or not vim.api.nvim_buf_is_valid(buf) then
-			buf = vim.api.nvim_create_buf(false, true)
+			buf = vim.api.nvim_create_buf(true, true)
 			vim.bo[buf].bufhidden = "hide"
 			vim.bo[buf].filetype = "markdown"
 			vim.api.nvim_buf_set_name(buf, "codex://" .. kind)
-			vim.keymap.set("n", "<Esc>", M.hide, { buffer = buf })
-			vim.keymap.set({ "n", "i" }, "<C-s>", M.send, { buffer = buf, desc = "Codex: send prompt" })
-			vim.keymap.set("n", "<Tab>", function()
-				local target = vim.api.nvim_get_current_win() == prompt_win and history_win or prompt_win
-				if valid(target) then
-					vim.api.nvim_set_current_win(target)
-				end
-			end, { buffer = buf, desc = "Codex: switch history/prompt" })
 			if kind == "history" then
 				history_buf = buf
 			else
@@ -281,35 +339,72 @@ local function show()
 			end
 		end
 	end
-	local width = math.max(20, math.min(math.floor(vim.o.columns * 0.8), vim.o.columns - 4))
-	local height = math.max(8, math.min(math.floor(vim.o.lines * 0.8), vim.o.lines - 6))
-	local input_height = math.min(7, math.floor(height / 3))
-	local row = math.max(0, math.floor((vim.o.lines - height - 4) / 2))
-	local col = math.max(0, math.floor((vim.o.columns - width) / 2) - 1)
-	history_win = vim.api.nvim_open_win(history_buf, false, {
-		relative = "editor",
-		style = "minimal",
-		border = "rounded",
-		width = width,
-		height = height - input_height,
-		row = row,
-		col = col,
-		title = " Codex ",
-		title_pos = "center",
-	})
-	prompt_win = vim.api.nvim_open_win(prompt_buf, true, {
-		relative = "editor",
-		style = "minimal",
-		border = "rounded",
-		width = width,
-		height = input_height,
-		row = row + height - input_height + 2,
-		col = col,
-		title = " Prompt · Ctrl-S send · Tab history · Esc hide ",
-		title_pos = "center",
-	})
+	local current = vim.api.nvim_get_current_win()
+	if vim.api.nvim_win_get_config(current).relative ~= "" then
+		current = vim.fn.win_getid(vim.fn.winnr("#"))
+		vim.api.nvim_set_current_win(current)
+	end
+	if not M.is_buffer(vim.api.nvim_win_get_buf(current)) then
+		return_state = {
+			buf = vim.api.nvim_win_get_buf(current),
+			view = vim.fn.winsaveview(),
+			options = { winbar = vim.wo.winbar, wrap = vim.wo.wrap, winfixheight = vim.wo.winfixheight },
+		}
+	end
+	history_win = current
+	vim.api.nvim_win_set_buf(history_win, history_buf)
+	vim.cmd("belowright 6split")
+	prompt_win = vim.api.nvim_get_current_win()
+	vim.api.nvim_win_set_buf(prompt_win, prompt_buf)
+	vim.wo[prompt_win].winbar = " Prompt · <leader>as send "
+	vim.wo[prompt_win].winfixheight = true
 	vim.wo[history_win].wrap, vim.wo[prompt_win].wrap = true, true
+	changing_layout = false
 	render()
+	restore_views()
+end
+
+function M.toggle()
+	if valid(history_win) or valid(prompt_win) then
+		M.hide()
+	else
+		M.open()
+	end
+end
+
+function M.bookmark()
+	if not M.is_buffer() then
+		return nil
+	end
+	if not state.thread_id or state.status == "Loading" then
+		notify("Wait until the session is ready before bookmarking", vim.log.levels.WARN)
+		return nil
+	end
+	local name = state.name
+	if not name then
+		for _, entry in ipairs(state.items) do
+			if entry.item.type == "userMessage" then
+				for _, content in ipairs(entry.item.content or {}) do
+					if content.text then
+						name = content.text:match("[^\n]+")
+						break
+					end
+				end
+				if name then
+					break
+				end
+			end
+		end
+	end
+	return { value = "codex://" .. state.thread_id, context = { title = name or "New conversation" } }
+end
+
+function M.select_bookmark(id)
+	if id == state.thread_id then
+		M.open()
+	else
+		M.resume(id)
+	end
 end
 
 local function load_history(thread, callback)
@@ -376,6 +471,12 @@ local function load_session(id, cwd, callback)
 				end
 				if state.thread_id and state.thread_id ~= result.thread.id then
 					client:request("thread/unsubscribe", { threadId = state.thread_id }, function() end)
+					remember_views()
+					drafts[state.thread_id] =
+						{ text = prompt_text(), history_view = history_view, prompt_view = prompt_view }
+					local draft = drafts[result.thread.id] or { text = "" }
+					vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, vim.split(draft.text, "\n", { plain = true }))
+					history_view, prompt_view = draft.history_view, draft.prompt_view
 				end
 				state.thread_id, state.cwd, state.name = result.thread.id, result.cwd, result.thread.name
 				state.model, state.effort = result.model, result.reasoningEffort
@@ -387,6 +488,7 @@ local function load_session(id, cwd, callback)
 				state.elapsed = 0
 				requests:clear()
 				render()
+				restore_views()
 				if callback then
 					callback()
 				end
@@ -450,32 +552,13 @@ function M.send()
 	end)
 end
 
-local function discard_draft(callback)
-	if not prompt_text():match("%S") then
-		callback()
-		return
-	end
-	vim.ui.select(
-		{ "Keep draft", "Discard draft and switch" },
-		{ prompt = "There is an unsent Codex prompt" },
-		function(_, index)
-			if index == 2 then
-				vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, { "" })
-				callback()
-			end
-		end
-	)
-end
-
 function M.new()
 	if state.busy then
 		notify("Finish or interrupt the current turn first")
 		return
 	end
-	discard_draft(function()
-		show()
-		load_session(nil, vim.fn.getcwd())
-	end)
+	show()
+	load_session(nil, vim.fn.getcwd())
 end
 
 function M.resume(id)
@@ -483,28 +566,21 @@ function M.resume(id)
 		notify("Finish or interrupt the current turn first")
 		return
 	end
-	local function resume()
-		show()
-		-- Another client may have appended turns since this process loaded the session.
-		-- Restart before a handoff so both agent context and displayed history come from disk.
-		if client then
-			state.busy, state.status = true, "Loading"
-			title()
-			client:restart(function(err)
-				if err then
-					fail(err)
-				else
-					load_session(id, vim.fn.getcwd())
-				end
-			end)
-		else
-			load_session(id, vim.fn.getcwd())
-		end
-	end
-	if id == state.thread_id then
-		resume()
+	show()
+	-- Another client may have appended turns since this process loaded the session.
+	-- Restart before a handoff so both agent context and displayed history come from disk.
+	if client then
+		state.busy, state.status = true, "Loading"
+		title()
+		client:restart(function(err)
+			if err then
+				fail(err)
+			else
+				load_session(id, vim.fn.getcwd())
+			end
+		end)
 	else
-		discard_draft(resume)
+		load_session(id, vim.fn.getcwd())
 	end
 end
 
@@ -703,7 +779,7 @@ end
 function M.setup(opts)
 	M.config = vim.tbl_deep_extend("force", M.config, opts or {})
 	for _, entry in ipairs({
-		{ "Codex", "<leader>ac", M.open, "open chat" },
+		{ "Codex", "<leader>ac", M.toggle, "switch code / chat" },
 		{ "CodexNew", "<leader>an", M.new, "new session" },
 		{ "CodexSend", "<leader>as", M.send, "send prompt" },
 		{ "CodexModel", "<leader>am", M.models, "select model / effort" },
@@ -742,12 +818,62 @@ function M.setup(opts)
 			end
 		end,
 	})
-	vim.api.nvim_create_autocmd("VimResized", {
+	vim.api.nvim_create_autocmd("QuitPre", {
 		group = group,
 		callback = function()
-			if valid(history_win) or valid(prompt_win) then
-				M.hide()
-				show()
+			if changing_layout then
+				return
+			end
+			local win = vim.api.nvim_get_current_win()
+			if win ~= history_win and win ~= prompt_win then
+				return
+			end
+			local sibling = win == prompt_win and history_win or prompt_win
+			if valid(sibling) then
+				leave_view(sibling, true, win)
+			end
+		end,
+	})
+	vim.api.nvim_create_autocmd("BufEnter", {
+		group = group,
+		callback = function(args)
+			if changing_layout then
+				return
+			end
+			local win = vim.api.nvim_get_current_win()
+			if (win == history_win or win == prompt_win) and not M.is_buffer(args.buf) then
+				-- Telescope, :buffer, and ordinary file navigation replace the whole chat view.
+				leave_view(win, false)
+			elseif not history_win and not prompt_win and M.is_buffer(args.buf) then
+				vim.schedule(function()
+					if vim.api.nvim_get_current_buf() == args.buf and not history_win then
+						M.open()
+					end
+				end)
+			end
+		end,
+	})
+	vim.api.nvim_create_autocmd("BufLeave", {
+		group = group,
+		callback = function(args)
+			if not changing_layout and M.is_buffer(args.buf) then
+				remember_views()
+			end
+		end,
+	})
+	vim.api.nvim_create_autocmd("WinClosed", {
+		group = group,
+		callback = function(args)
+			if changing_layout then
+				return
+			end
+			local closed = tonumber(args.match)
+			if closed == history_win or closed == prompt_win then
+				vim.schedule(function()
+					if closed == history_win or closed == prompt_win then
+						M.hide()
+					end
+				end)
 			end
 		end,
 	})

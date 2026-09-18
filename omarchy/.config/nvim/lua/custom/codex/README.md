@@ -21,7 +21,7 @@ APIs; future Codex protocol changes may require updating this client.
 
 | Key | Command | Action |
 | --- | --- | --- |
-| `<leader>ac` | `:Codex` | Open the chat and prompt windows |
+| `<leader>ac` | `:Codex` | Switch between code and chat |
 | `<leader>an` | `:CodexNew` | Start a session in Neovim's current directory |
 | `<leader>ar` | `:CodexSessions` | Pick a saved session in the current directory |
 | | `:CodexSessions!` | Pick from all project directories |
@@ -30,19 +30,42 @@ APIs; future Codex protocol changes may require updating this client.
 | `<leader>as` | `:CodexSend` | Send the prompt |
 | `<leader>am` | `:CodexModel` | Select model, then reasoning effort |
 | `<leader>af` | `:CodexFiles` | Insert file/directory references into the prompt |
-| `<leader>ap` | `:CodexApproval` | Reopen a pending approval or question |
+| `<leader>ap` | `:CodexApproval` | Open a pending approval or question |
 | `<leader>ax` | `:CodexInterrupt` | Interrupt the running turn |
 
-In either chat window, **Ctrl-S** sends the prompt, **Tab** in normal mode
-switches between history and prompt, and **Escape** in normal mode hides both
-windows. In insert mode, Escape first returns to normal mode. Hiding does not
-cancel the turn or discard the draft. `:CodexRun` remains an alias for sending.
+Chat uses two ordinary listed buffers in the current tab: history above a
+six-line prompt. They replace the current code window. Use normal Neovim editing,
+search, yanking, and `<C-w>k` / `<C-w>j` to move between the windows. Escape leaves
+insert mode; there are no chat-specific Escape, Tab, or Ctrl-S mappings.
+Send with **`<leader>as` in normal mode**. `:CodexRun` remains an alias for sending.
 
-The history title displays the model, reasoning effort, status, and elapsed
+`:q` from either chat window returns to the previous code buffer, preserving
+unsaved code, the prompt draft, and your reading position. `<leader>ac` does the
+same and reopens chat when used from code. Neither cancels the running turn.
+Opening a file through Telescope, Harpoon, or `:buffer` leaves a single code
+window. Closing Neovim itself still stops its app-server process.
+
+The history winbar displays the model, reasoning effort, status, and elapsed
 wall-clock time for the current/latest turn (including time awaiting approval).
 Model selection applies to the next message in this session, without changing
 Codex's global defaults. The list and supported effort choices come from Codex.
-When Codex reports no explicit effort, the title says `default effort`.
+When Codex reports no explicit effort, the winbar says `default effort`.
+
+## Harpoon
+
+Use **Ctrl-H** in either chat buffer to bookmark the current conversation in your
+existing Harpoon list. Files and conversations share the same list and shortcuts:
+Ctrl-M opens the menu; Ctrl-A, Ctrl-R, Ctrl-S, Ctrl-T, and Ctrl-G select slots 1–5.
+Conversation entries show a title and stable Codex session ID. Bookmarking history
+and prompt does not create duplicate entries for the same conversation.
+
+Selecting a conversation resumes it; selecting the already open conversation
+returns to its existing view. Use `:CodexRefresh` after continuing it in another
+client. Finish or interrupt a running turn before selecting a different
+conversation; returning to code is always available.
+
+Harpoon persists only the bookmark. Codex owns the history. Unsent drafts and
+reading positions are kept per conversation in memory while Neovim is open.
 
 ## Files and directories
 
@@ -64,8 +87,10 @@ you answer approval requests. These settings apply to the resumed session;
 global Codex configuration is not edited. Codex decides which actions require
 approval; this is not a confirmation dialog for every tool call or edit.
 
-Approval dialogs show the command/network destination, requested permissions,
-or proposed file diffs. The applicable choices are:
+New requests notify you and show `Response required` in the history winbar
+without taking focus. Use `<leader>ap` to open the dialog. It shows the
+command/network destination, requested permissions, or proposed file diffs.
+The applicable choices are:
 
 - `a`: allow once (or for the current turn for permission grants).
 - `s`: allow for the session.
@@ -129,8 +154,11 @@ The test peer never runs a model or touches your Codex history. It exercises
 fragmented/Unicode streaming, paginated and legacy history, model selection,
 command/file/permission approvals, questions, stale approval callbacks,
 cancellation, failed sends/resumes, process crashes, draft preservation, and the
-installed Telescope pickers. Python 3 and the existing Telescope/Plenary
-installations under Neovim's data directory are required.
+installed Telescope pickers. It also checks native splits, `:q`, returning to
+unsaved code, and real Harpoon selection, menu ordering, and bookmark persistence.
+Harpoon test data uses an isolated temporary directory; your bookmarks are not
+modified. Python 3 and the existing Telescope/Plenary/Harpoon installations under
+Neovim's data directory are required.
 
 Optionally validate all outgoing requests and approval responses against the
 installed CLI's schema (requires Python `jsonschema`):

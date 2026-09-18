@@ -1,22 +1,63 @@
 return {
 	"ThePrimeagen/harpoon",
 	branch = "harpoon2",
-	opts = {
-		menu = {
-			width = vim.api.nvim_win_get_width(0) - 4,
-		},
-		settings = {
-			save_on_toggle = false,
-		},
-	},
+	opts = function()
+		local defaults = require("harpoon.config").get_default_config().default
+		return {
+			menu = { width = vim.api.nvim_win_get_width(0) - 4 },
+			settings = { save_on_toggle = false },
+			default = {
+				select = function(item, list, options)
+					if not item then
+						return
+					end
+					local codex = require("custom.codex")
+					local id = item.value:match("^codex://(.+)$")
+					if id then
+						codex.select_bookmark(id)
+					else
+						codex.hide()
+						defaults.select(item, list, options)
+					end
+				end,
+				display = function(item)
+					if item.value:match("^codex://") then
+						local title = (item.context.title or "Conversation"):gsub("%c", " ")
+						return "Codex: " .. title .. " [" .. item.value .. "]"
+					end
+					return defaults.display(item)
+				end,
+				create_list_item = function(config, name)
+					-- Preserve conversation identity when editing a title in Harpoon's menu.
+					local title, value
+					if name then
+						title, value = name:match("^Codex: (.-) %[(codex://[^%]]+)%]$")
+					end
+					if value then
+						return { value = value, context = { title = title } }
+					end
+					return defaults.create_list_item(config, name)
+				end,
+			},
+		}
+	end,
 	keys = function()
 		local keys = {
 			{
 				"<c-h>",
 				function()
-					require("harpoon"):list():add()
+					local codex = require("custom.codex")
+					local list = require("harpoon"):list()
+					if codex.is_buffer() then
+						local item = codex.bookmark()
+						if item then
+							list:add(item)
+						end
+					else
+						list:add()
+					end
 				end,
-				desc = "Harpoon File",
+				desc = "Harpoon File / Codex Conversation",
 			},
 			{
 				"<c-m>",
