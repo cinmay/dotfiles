@@ -97,6 +97,9 @@ local function run()
 	assert(vim.api.nvim_win_get_position(window("history"))[1] < vim.api.nvim_win_get_position(window("prompt"))[1])
 	assert(vim.api.nvim_win_get_width(window("history")) == vim.api.nvim_win_get_width(window("prompt")))
 	assert(vim.api.nvim_win_get_height(window("prompt")) == 18)
+	assert(vim.bo[buffer("history")].buftype == "nofile")
+	assert(vim.bo[buffer("prompt")].buftype == "")
+	assert(not vim.bo[buffer("prompt")].swapfile)
 	for _, name in ipairs({ "history", "prompt" }) do
 		for _, mode in ipairs({ "n", "i" }) do
 			for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(buffer(name), mode)) do

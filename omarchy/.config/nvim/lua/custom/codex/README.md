@@ -37,6 +37,8 @@ Chat uses two ordinary listed buffers in the current tab: history above an
 search, yanking, and `<C-w>k` / `<C-w>j` to move between the windows. Escape leaves
 insert mode; there are no chat-specific Escape, Tab, or Ctrl-S mappings.
 Send with **`<leader>as` in normal mode**. `:CodexRun` remains an alias for sending.
+Copilot inline suggestions also work in the prompt; accept them with the
+configured Copilot keymap.
 
 The transcript keeps user and Codex messages visible and shows compact activity
 lines for commands, file changes, tools, and searches. Raw command output, file

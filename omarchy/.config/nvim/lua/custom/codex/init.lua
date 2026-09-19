@@ -323,8 +323,14 @@ local function show()
 			buf = prompt_buf
 		end
 		if not buf or not vim.api.nvim_buf_is_valid(buf) then
-			buf = vim.api.nvim_create_buf(true, true)
+			-- Keep history as a scratch buffer, but use a normal buffer for the
+			-- prompt so Copilot can attach to it without making it file-backed.
+			local scratch = kind == "history"
+			buf = vim.api.nvim_create_buf(true, scratch)
 			vim.bo[buf].bufhidden = "hide"
+			if not scratch then
+				vim.bo[buf].swapfile = false
+			end
 			vim.bo[buf].filetype = "markdown"
 			vim.api.nvim_buf_set_name(buf, "codex://" .. kind)
 			if kind == "history" then
