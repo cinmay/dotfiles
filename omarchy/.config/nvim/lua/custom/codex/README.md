@@ -21,7 +21,6 @@ APIs; future Codex protocol changes may require updating this client.
 
 | Key | Command | Action |
 | --- | --- | --- |
-| `<leader>ac` | `:Codex` | Switch between code and chat |
 | `<leader>an` | `:CodexNew` | Start a session in Neovim's current directory |
 | `<leader>ar` | `:CodexSessions` | Pick a saved session in the current directory |
 | | `:CodexSessions!` | Pick from all project directories |
@@ -45,8 +44,8 @@ diffs, and reasoning summaries are hidden so the view stays readable like Codex
 CLI.
 
 `:q` from either chat window returns to the previous code buffer, preserving
-unsaved code, the prompt draft, and your reading position. `<leader>ac` does the
-same and reopens chat when used from code. Neither cancels the running turn.
+unsaved code, the prompt draft, and your reading position. It does not cancel the
+running turn.
 Opening a file through Telescope, Harpoon, or `:buffer` leaves a single code
 window. Closing Neovim itself still stops its app-server process.
 

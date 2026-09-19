@@ -359,14 +359,6 @@ local function show()
 	restore_views()
 end
 
-function M.toggle()
-	if valid(history_win) or valid(prompt_win) then
-		M.hide()
-	else
-		M.open()
-	end
-end
-
 function M.bookmark()
 	if not M.is_buffer() then
 		return nil
@@ -774,7 +766,6 @@ end
 function M.setup(opts)
 	M.config = vim.tbl_deep_extend("force", M.config, opts or {})
 	for _, entry in ipairs({
-		{ "Codex", "<leader>ac", M.toggle, "switch code / chat" },
 		{ "CodexNew", "<leader>an", M.new, "new session" },
 		{ "CodexSend", "<leader>as", M.send, "send prompt" },
 		{ "CodexModel", "<leader>am", M.models, "select model / effort" },
