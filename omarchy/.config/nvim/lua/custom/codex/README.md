@@ -33,11 +33,16 @@ APIs; future Codex protocol changes may require updating this client.
 | `<leader>ap` | `:CodexApproval` | Open a pending approval or question |
 | `<leader>ax` | `:CodexInterrupt` | Interrupt the running turn |
 
-Chat uses two ordinary listed buffers in the current tab: history above a
-six-line prompt. They replace the current code window. Use normal Neovim editing,
+Chat uses two ordinary listed buffers in the current tab: history above an
+18-line prompt. They replace the current code window. Use normal Neovim editing,
 search, yanking, and `<C-w>k` / `<C-w>j` to move between the windows. Escape leaves
 insert mode; there are no chat-specific Escape, Tab, or Ctrl-S mappings.
 Send with **`<leader>as` in normal mode**. `:CodexRun` remains an alias for sending.
+
+The transcript keeps user and Codex messages visible and shows compact activity
+lines for commands, file changes, tools, and searches. Raw command output, file
+diffs, and reasoning summaries are hidden so the view stays readable like Codex
+CLI.
 
 `:q` from either chat window returns to the previous code buffer, preserving
 unsaved code, the prompt draft, and your reading position. `<leader>ac` does the
@@ -138,6 +143,7 @@ service. Unsent drafts live only in the Neovim instance.
 require("custom.codex").setup({
   command = "codex",
   done_sound = "", -- Disable the existing mpv completion sound, if desired.
+  prompt_height = 18,
 })
 ```
 

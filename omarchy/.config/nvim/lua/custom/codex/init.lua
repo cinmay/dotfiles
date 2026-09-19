@@ -3,6 +3,7 @@ local M = {}
 M.config = {
 	command = "codex",
 	done_sound = vim.fn.stdpath("config") .. "/lua/custom/codex/done.mp3",
+	prompt_height = 18,
 }
 
 local state = { items = {}, item_index = {}, status = "Ready", busy = false }
@@ -86,23 +87,17 @@ local function render()
 		elseif item.type == "agentMessage" or item.type == "plan" then
 			add("\n## Codex\n\n" .. (item.text or ""))
 		elseif item.type == "commandExecution" then
-			add("\n### Command · " .. (item.status or "running") .. "\n\n```sh\n" .. item.command .. "\n```")
-			if item.aggregatedOutput and item.aggregatedOutput ~= "" then
-				add("```text\n" .. item.aggregatedOutput .. "\n```")
-			end
+			add("\n• Ran " .. (item.command or "command") .. " · " .. (item.status or "running"))
 		elseif item.type == "fileChange" then
-			add("\n### File changes · " .. (item.status or "in progress"))
+			local paths = {}
 			for _, change in ipairs(item.changes or {}) do
-				add("\n" .. change.path .. "\n```diff\n" .. (change.diff or "") .. "\n```")
+				table.insert(paths, change.path)
 			end
-		elseif item.type == "reasoning" then
-			if #(item.summary or {}) > 0 then
-				add("\n" .. table.concat(item.summary, "\n"))
-			end
+			add("\n• Changed " .. (#paths > 0 and table.concat(paths, ", ") or "files") .. " · " .. (item.status or "in progress"))
 		elseif item.type == "mcpToolCall" then
-			add("\nTool: " .. item.server .. "/" .. item.tool .. " · " .. (item.status or "running"))
+			add("\n• Tool " .. item.server .. "/" .. item.tool .. " · " .. (item.status or "running"))
 		elseif item.type == "webSearch" then
-			add("\nSearch: " .. item.query)
+			add("\n• Search: " .. item.query)
 		end
 	end
 	if state.error then
@@ -353,7 +348,7 @@ local function show()
 	end
 	history_win = current
 	vim.api.nvim_win_set_buf(history_win, history_buf)
-	vim.cmd("belowright 6split")
+	vim.cmd("belowright " .. M.config.prompt_height .. "split")
 	prompt_win = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_buf(prompt_win, prompt_buf)
 	vim.wo[prompt_win].winbar = " Prompt · <leader>as send "

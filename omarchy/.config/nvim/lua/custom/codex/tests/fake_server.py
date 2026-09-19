@@ -160,6 +160,11 @@ for line in sys.stdin:
             # Foreign notifications must not contaminate this transcript.
             send({"method": "item/completed", "params": {"threadId": "foreign", "turnId": "x",
                  "item": {"id": "x", "type": "agentMessage", "text": "DO NOT SHOW"}}})
+            item({"id": "command", "type": "commandExecution", "command": "echo page", "status": "inProgress"}, "started")
+            event("item/commandExecution/outputDelta", turnId=turn_id, itemId="command",
+                  delta="page source that should stay hidden")
+            item({"id": "command", "type": "commandExecution", "command": "echo page",
+                  "status": "completed", "aggregatedOutput": "page source that should stay hidden"})
             item({"id": "assistant", "type": "agentMessage", "text": ""}, "started")
             event("item/agentMessage/delta", turnId=turn_id, itemId="assistant", delta="Hø")
             event("item/agentMessage/delta", turnId=turn_id, itemId="assistant", delta="llo")

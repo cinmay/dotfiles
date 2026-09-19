@@ -95,6 +95,7 @@ local function run()
 	assert(vim.api.nvim_win_get_config(window("prompt")).relative == "")
 	assert(vim.api.nvim_win_get_position(window("history"))[1] < vim.api.nvim_win_get_position(window("prompt"))[1])
 	assert(vim.api.nvim_win_get_width(window("history")) == vim.api.nvim_win_get_width(window("prompt")))
+	assert(vim.api.nvim_win_get_height(window("prompt")) == 18)
 	for _, name in ipairs({ "history", "prompt" }) do
 		for _, mode in ipairs({ "n", "i" }) do
 			for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(buffer(name), mode)) do
@@ -130,6 +131,8 @@ local function run()
 	assert(text("prompt") == "")
 	assert(text("history"):find("Høllo — final authoritative text", 1, true))
 	assert(not text("history"):find("DO NOT SHOW", 1, true))
+	assert(text("history"):find("Ran echo page", 1, true))
+	assert(not text("history"):find("page source that should stay hidden", 1, true))
 	local _, count = text("history"):gsub("final authoritative text", "")
 	assert(count == 1, "Completed item duplicated streaming output")
 
