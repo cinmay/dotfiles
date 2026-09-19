@@ -244,7 +244,7 @@ vim.keymap.set("n", "G", "Gzz", { desc = "Go to line and center cursor" })
 -- Toggles
 vim.keymap.set("n", "<leader>ta", ":ASToggle<CR>", { desc = "toggle auto save" })
 
--- Codex thread workflow
+-- Codex chat, session history, and approvals
 require("custom.codex").setup()
 
 require("local_tts").setup({

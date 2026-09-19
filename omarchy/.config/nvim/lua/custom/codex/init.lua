@@ -2,616 +2,881 @@ local M = {}
 
 M.config = {
 	command = "codex",
-	flags = { "--sandbox", "workspace-write" },
-	json = true,
-	delimiter = "--- Codex Run ---",
-	session_header = "--- Codex Session ---",
-	next_prompt_marker = "--- Next Prompt ---",
-	time_prefix = "Time: ",
-	debug = false,
-	debug_max_lines = 200,
-	close_delay_ms = 1000,
 	done_sound = vim.fn.stdpath("config") .. "/lua/custom/codex/done.mp3",
 }
 
-local function is_thread_buffer(buf, cwd)
-	local buf_path = vim.api.nvim_buf_get_name(buf)
-	if buf_path == "" then
-		return false
-	end
+local state = { items = {}, item_index = {}, status = "Ready", busy = false }
+local client, requests, timer
+local history_buf, prompt_buf, history_win, prompt_win
+local render_pending = false
+local return_state, history_view, prompt_view
+local changing_layout = false
+local drafts = {}
 
-	local normalized_cwd = cwd:gsub("/+$", "")
-	local threads_dir = normalized_cwd .. "/.ai/threads/"
-	return buf_path:find(threads_dir, 1, true) ~= nil
+local function notify(message, level)
+	vim.notify("Codex: " .. message, level or vim.log.levels.INFO)
 end
 
-local function strip_header_block(lines, header)
-	for i, line in ipairs(lines) do
-		if line == header then
-			table.remove(lines, i)
-			if lines[i] and lines[i]:match("^ID:") then
-				table.remove(lines, i)
-			end
-			if lines[i] == "" then
-				table.remove(lines, i)
-			end
-			break
-		end
-	end
-	return lines
+local function valid(win)
+	return win and vim.api.nvim_win_is_valid(win)
 end
 
-local function extract_session_id(lines, header)
-	for i, line in ipairs(lines) do
-		if line == header then
-			local id_line = lines[i + 1] or ""
-			local id = id_line:match("^ID:%s*(.+)$")
-			if id and id:match("%S") then
-				return id
-			end
-			return nil
-		end
+local function stop_timer()
+	if timer then
+		timer:stop()
+		timer:close()
+		timer = nil
 	end
-	return nil
 end
 
-local function ensure_session_header(buf, header, session_id)
-	if not session_id or session_id == "" then
+local function title()
+	if not valid(history_win) then
 		return
 	end
-
-	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-	lines = strip_header_block(lines, header)
-
-	local new_lines = { header, "ID: " .. session_id, "" }
-	for _, line in ipairs(lines) do
-		table.insert(new_lines, line)
+	local elapsed = state.elapsed or 0
+	if state.started then
+		elapsed = math.floor((vim.uv.hrtime() - state.started) / 1e9)
 	end
-
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, new_lines)
+	local status = requests and #requests.queue > 0 and "Response required" or state.status
+	vim.wo[history_win].winbar = string
+		.format(
+			" Codex · %s · %s · %s · %02d:%02d ",
+			state.model or "loading model",
+			state.effort or "default effort",
+			status,
+			math.floor(elapsed / 60),
+			elapsed % 60
+		)
+		:gsub("%%", "%%%%")
 end
 
-local function last_prompt(lines, marker)
-	local last_index = nil
-	for i, line in ipairs(lines) do
-		if line == marker then
-			last_index = i
-		end
-	end
-
-	if not last_index then
-		return nil
-	end
-
-	local start = last_index + 1
-	if lines[start] and lines[start]:match("^Time:%s") then
-		start = start + 1
-	end
-	while lines[start] == "" do
-		start = start + 1
-	end
-
-	local prompt_lines = {}
-	for i = start, #lines do
-		table.insert(prompt_lines, lines[i])
-	end
-
-	return table.concat(prompt_lines, "\n") .. "\n"
+local function find_item(turn_id, item_id)
+	local index = state.item_index[turn_id .. ":" .. item_id]
+	return index and state.items[index].item
 end
 
-local function full_prompt(lines, header)
-	local stripped = strip_header_block(vim.deepcopy(lines), header)
-	return table.concat(stripped, "\n") .. "\n"
-end
-
-local function parse_stream_event(line)
-	local ok, event = pcall(vim.json.decode, line)
-	if not ok or type(event) ~= "table" then
-		return nil
+local function put_item(turn_id, item)
+	local key = turn_id .. ":" .. item.id
+	local index = state.item_index[key]
+	if not index then
+		index = #state.items + 1
+		state.item_index[key] = index
 	end
-	return event
+	state.items[index] = { turnId = turn_id, item = item }
 end
 
-local function parse_session_id(stdout)
-	local session_id = nil
-	local thread_id = nil
-	local decoded_any = false
-
-	for _, line in ipairs(vim.split(stdout or "", "\n", { plain = true, trimempty = true })) do
-		local event = parse_stream_event(line)
-		if event then
-			decoded_any = true
-			if event.type == "session_meta" and event.payload and event.payload.id then
-				session_id = event.payload.id
+local function render()
+	if not history_buf or not vim.api.nvim_buf_is_valid(history_buf) then
+		return
+	end
+	local lines = { "# " .. (state.name or "Codex"), "", "Directory: " .. (state.cwd or vim.fn.getcwd()) }
+	if state.thread_id then
+		table.insert(lines, "Session: " .. state.thread_id)
+	end
+	local function add(text)
+		vim.list_extend(lines, vim.split(text, "\n", { plain = true }))
+	end
+	for _, entry in ipairs(state.items) do
+		local item = entry.item
+		if item.type == "userMessage" then
+			add("\n## You\n")
+			for _, content in ipairs(item.content or {}) do
+				add(content.text or content.path or content.url or "[Attachment]")
 			end
-			if event.type == "thread.started" and event.thread_id then
-				thread_id = event.thread_id
+		elseif item.type == "agentMessage" or item.type == "plan" then
+			add("\n## Codex\n\n" .. (item.text or ""))
+		elseif item.type == "commandExecution" then
+			add("\n### Command · " .. (item.status or "running") .. "\n\n```sh\n" .. item.command .. "\n```")
+			if item.aggregatedOutput and item.aggregatedOutput ~= "" then
+				add("```text\n" .. item.aggregatedOutput .. "\n```")
+			end
+		elseif item.type == "fileChange" then
+			add("\n### File changes · " .. (item.status or "in progress"))
+			for _, change in ipairs(item.changes or {}) do
+				add("\n" .. change.path .. "\n```diff\n" .. (change.diff or "") .. "\n```")
+			end
+		elseif item.type == "reasoning" then
+			if #(item.summary or {}) > 0 then
+				add("\n" .. table.concat(item.summary, "\n"))
+			end
+		elseif item.type == "mcpToolCall" then
+			add("\nTool: " .. item.server .. "/" .. item.tool .. " · " .. (item.status or "running"))
+		elseif item.type == "webSearch" then
+			add("\nSearch: " .. item.query)
+		end
+	end
+	if state.error then
+		add("\n## Error\n\n" .. state.error)
+	end
+	if #state.items == 0 then
+		add("\nWrite a prompt below. <leader>as sends; <leader>ar resumes a session.")
+	end
+	local follow = valid(history_win)
+		and vim.api.nvim_win_get_cursor(history_win)[1] >= vim.api.nvim_buf_line_count(history_buf) - 1
+	vim.bo[history_buf].modifiable = true
+	vim.api.nvim_buf_set_lines(history_buf, 0, -1, false, lines)
+	vim.bo[history_buf].modifiable = false
+	if follow then
+		vim.api.nvim_win_set_cursor(history_win, { #lines, 0 })
+	end
+	title()
+end
+
+local function schedule_render()
+	if render_pending then
+		return
+	end
+	render_pending = true
+	vim.defer_fn(function()
+		render_pending = false
+		render()
+	end, 40)
+end
+
+local function finish(status, err)
+	if state.started then
+		state.elapsed = math.floor((vim.uv.hrtime() - state.started) / 1e9)
+	end
+	state.started, state.turn_id = nil, nil
+	state.busy, state.status, state.error = false, status, err
+	stop_timer()
+	requests:clear()
+	schedule_render()
+end
+
+local function fail(err)
+	state.loaded = false
+	finish("Error", err)
+	notify(err, vim.log.levels.ERROR)
+end
+
+local function notification(method, p)
+	if method == "serverRequest/resolved" then
+		requests:resolve(p.requestId)
+		return
+	end
+	if p.threadId ~= state.thread_id then
+		return
+	end
+	if method == "turn/started" then
+		state.turn_id, state.busy, state.status = p.turn.id, true, "Running"
+	elseif method == "turn/completed" then
+		if state.turn_id and p.turn.id ~= state.turn_id then
+			return
+		end
+		finish(p.turn.status, p.turn.error and p.turn.error.message)
+		if p.turn.status == "completed" then
+			local sound = M.config.done_sound
+			if sound and vim.fn.filereadable(sound) == 1 and vim.fn.executable("mpv") == 1 then
+				vim.fn.jobstart({ "mpv", "--no-video", "--really-quiet", sound }, { detach = true })
 			end
 		end
-	end
-
-	if not decoded_any then
-		return nil
-	end
-
-	return session_id or thread_id
-end
-
-local function clean_success_stderr(stderr, code)
-	if code ~= 0 or not stderr or stderr == "" then
-		return stderr
-	end
-
-	local lines = {}
-	for _, line in ipairs(vim.split(stderr, "\n", { plain = true })) do
-		if not line:match("failed to record rollout items: thread [%w%-]+ not found") then
-			table.insert(lines, line)
+		notify("Turn " .. p.turn.status)
+	elseif method == "item/started" or method == "item/completed" then
+		put_item(p.turnId, p.item)
+	elseif method == "item/agentMessage/delta" then
+		local item = find_item(p.turnId, p.itemId)
+		if not item then
+			item = { id = p.itemId, type = "agentMessage", text = "" }
+			put_item(p.turnId, item)
+		end
+		item.text = item.text .. p.delta
+	elseif method == "item/commandExecution/outputDelta" then
+		local item = find_item(p.turnId, p.itemId)
+		if item then
+			item.aggregatedOutput = (item.aggregatedOutput or "") .. p.delta
+		end
+	elseif method == "thread/name/updated" then
+		state.name = p.threadName
+	elseif method == "thread/settings/updated" then
+		state.model = p.threadSettings.model
+		state.effort = p.threadSettings.effort
+	elseif method == "model/rerouted" then
+		state.model = p.toModel
+	elseif method == "thread/closed" then
+		state.loaded = false
+	elseif method == "error" then
+		state.error = p.error and p.error.message or "Codex reported an error"
+		if not p.willRetry then
+			notify(state.error, vim.log.levels.ERROR)
 		end
 	end
-
-	return table.concat(lines, "\n")
+	schedule_render()
 end
 
-local function append_block(buf, stdout, stderr)
-	local timestamp = os.date("%Y-%m-%d %H:%M:%S")
-	local lines = {}
-
-	table.insert(lines, "")
-	table.insert(lines, M.config.time_prefix .. timestamp)
-	table.insert(lines, M.config.delimiter)
-	table.insert(lines, "")
-	table.insert(lines, "Codex output:")
-	if stdout and stdout ~= "" then
-		local out_lines = vim.split(stdout, "\n", { plain = true, trimempty = true })
-		for _, line in ipairs(out_lines) do
-			table.insert(lines, line)
+local function ensure_client(callback)
+	if not client then
+		requests = require("custom.codex.requests").new(function(id, result, err)
+			return client:reply(id, result, err)
+		end, find_item, title)
+		client = require("custom.codex.server").new(M.config.command, {
+			notification = notification,
+			request = function(request)
+				if request.params.threadId ~= state.thread_id then
+					client:reply(request.id, nil, { code = -32602, message = "This session is not open in Neovim" })
+					return
+				end
+				requests:add(request)
+			end,
+			exit = function(err)
+				if not state.exiting then
+					fail(err)
+				end
+			end,
+		})
+	end
+	client:start(function(err)
+		if err then
+			fail(err)
+		else
+			callback()
 		end
-	end
-	-- table.insert(lines, "```")
-
-	if stderr and stderr:match("%S") then
-		table.insert(lines, "")
-		table.insert(lines, "text")
-		local err_lines = vim.split(stderr, "\n", { plain = true, trimempty = true })
-		for _, line in ipairs(err_lines) do
-			table.insert(lines, line)
-		end
-	end
-
-	table.insert(lines, "")
-	table.insert(lines, "Time: " .. timestamp)
-	table.insert(lines, M.config.next_prompt_marker)
-	table.insert(lines, "")
-
-	vim.api.nvim_buf_set_lines(buf, -1, -1, false, lines)
+	end)
 end
 
-local function play_done_sound()
-	local sound = M.config.done_sound
-	if not sound or sound == "" or vim.fn.filereadable(sound) ~= 1 then
-		return
-	end
-	if vim.fn.executable("mpv") ~= 1 then
-		return
-	end
-
-	vim.fn.jobstart({ "mpv", "--no-video", "--really-quiet", sound }, { detach = true })
-end
-
-local function open_live_window()
-	local buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
-	vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
-	vim.api.nvim_set_option_value("swapfile", false, { buf = buf })
-	vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf })
-
-	local width = math.floor(vim.o.columns * 0.7)
-	local height = math.floor(vim.o.lines * 0.6)
-	local row = math.floor((vim.o.lines - height) / 2)
-	local col = math.floor((vim.o.columns - width) / 2)
-
-	local win = vim.api.nvim_open_win(buf, true, {
-		relative = "editor",
-		width = width,
-		height = height,
-		row = row,
-		col = col,
-		style = "minimal",
-		border = "rounded",
-		title = "Codex — Running (00:00)",
-		title_pos = "center",
-	})
-
-	return buf, win
-end
-
-local function update_window_title(win, elapsed, model)
-	if not vim.api.nvim_win_is_valid(win) then
-		return
-	end
-	local title = string.format("Codex — Running (%s)", elapsed)
-	if model and model ~= "" then
-		title = title .. " — " .. model
-	end
-	local config = vim.api.nvim_win_get_config(win)
-	config.title = title
-	vim.api.nvim_win_set_config(win, config)
-end
-
-local function append_live(buf, lines)
-	if not vim.api.nvim_buf_is_valid(buf) then
-		return
-	end
-	if type(lines) == "string" then
-		lines = { lines }
-	end
-	vim.api.nvim_buf_set_lines(buf, -1, -1, false, lines)
-end
-
-local function run_codex_job(cmd, input, handlers)
-	local stdout_accum = {}
-	local stderr_accum = {}
-	local stdout_buf = ""
-	local stderr_buf = ""
-
-	local function handle_line(handler, line)
-		if handler then
-			handler(line)
-		end
-	end
-
-	local function flush_buffer(buf, accum, handler)
-		if buf ~= "" then
-			table.insert(accum, buf)
-			handle_line(handler, buf)
-		end
+local function prompt_text()
+	if not prompt_buf or not vim.api.nvim_buf_is_valid(prompt_buf) then
 		return ""
 	end
-
-	local job_id = vim.fn.jobstart(cmd, {
-		stdin = "pipe",
-		on_stdout = function(_, data)
-			if not data then
-				return
-			end
-			for i, chunk in ipairs(data) do
-				if i == #data then
-					if chunk == "" then
-						stdout_buf = flush_buffer(stdout_buf, stdout_accum, handlers.on_stdout)
-					else
-						stdout_buf = stdout_buf .. chunk
-					end
-				else
-					local line = stdout_buf .. chunk
-					stdout_buf = ""
-					table.insert(stdout_accum, line)
-					handle_line(handlers.on_stdout, line)
-				end
-			end
-		end,
-		on_stderr = function(_, data)
-			if not data then
-				return
-			end
-			for i, chunk in ipairs(data) do
-				if i == #data then
-					if chunk == "" then
-						stderr_buf = flush_buffer(stderr_buf, stderr_accum, handlers.on_stderr)
-					else
-						stderr_buf = stderr_buf .. chunk
-					end
-				else
-					local line = stderr_buf .. chunk
-					stderr_buf = ""
-					table.insert(stderr_accum, line)
-					handle_line(handlers.on_stderr, line)
-				end
-			end
-		end,
-		on_exit = function(_, code)
-			stdout_buf = flush_buffer(stdout_buf, stdout_accum, handlers.on_stdout)
-			stderr_buf = flush_buffer(stderr_buf, stderr_accum, handlers.on_stderr)
-			if handlers.on_exit then
-				handlers.on_exit({
-					code = code,
-					stdout = table.concat(stdout_accum, "\n"),
-					stderr = table.concat(stderr_accum, "\n"),
-				})
-			end
-		end,
-	})
-
-	if job_id <= 0 then
-		return nil
-	end
-
-	vim.fn.chansend(job_id, input)
-	vim.fn.chanclose(job_id, "stdin")
-	return job_id
+	return table.concat(vim.api.nvim_buf_get_lines(prompt_buf, 0, -1, false), "\n")
 end
 
-function M.run()
-	if not vim.fn.jobstart then
-		vim.notify("vim.fn.jobstart is not available in this Neovim version", vim.log.levels.ERROR)
+local function remember_views()
+	if valid(history_win) and vim.api.nvim_win_get_buf(history_win) == history_buf then
+		history_view = vim.api.nvim_win_call(history_win, vim.fn.winsaveview)
+	end
+	if valid(prompt_win) and vim.api.nvim_win_get_buf(prompt_win) == prompt_buf then
+		prompt_view = vim.api.nvim_win_call(prompt_win, vim.fn.winsaveview)
+	end
+end
+
+local function restore_views()
+	if valid(history_win) and history_view then
+		vim.api.nvim_win_call(history_win, function()
+			vim.fn.winrestview(history_view)
+		end)
+	end
+	if valid(prompt_win) and prompt_view then
+		vim.api.nvim_win_call(prompt_win, function()
+			vim.fn.winrestview(prompt_view)
+		end)
+	end
+end
+
+-- When :q closes one Codex window, its sibling becomes the code window.
+-- Let the original :q finish normally instead of mapping or replacing the command.
+local function leave_view(keep, restore_buffer, quitting)
+	changing_layout = true
+	remember_views()
+	local old_history, old_prompt = history_win, prompt_win
+	history_win, prompt_win = nil, nil
+	if valid(keep) then
+		if restore_buffer then
+			local buf = return_state and return_state.buf
+			if not buf or not vim.api.nvim_buf_is_valid(buf) then
+				buf = vim.api.nvim_create_buf(true, false)
+			end
+			vim.api.nvim_win_set_buf(keep, buf)
+		end
+		if return_state then
+			for option, value in pairs(return_state.options) do
+				vim.wo[keep][option] = value
+			end
+			if restore_buffer then
+				vim.api.nvim_win_call(keep, function()
+					vim.fn.winrestview(return_state.view)
+				end)
+			end
+		end
+	end
+	for _, win in ipairs({ old_prompt, old_history }) do
+		if valid(win) and win ~= keep and win ~= quitting then
+			vim.api.nvim_win_close(win, true)
+		end
+	end
+	if not quitting and valid(keep) then
+		vim.api.nvim_set_current_win(keep)
+	end
+	changing_layout = false
+end
+
+function M.hide()
+	if not history_win and not prompt_win then
 		return
 	end
+	local keep = valid(history_win) and history_win or prompt_win
+	leave_view(keep, true)
+end
 
-	local buf = vim.api.nvim_get_current_buf()
-	local cwd = vim.fn.getcwd()
+function M.is_buffer(buf)
+	buf = buf or vim.api.nvim_get_current_buf()
+	return buf == history_buf or buf == prompt_buf
+end
 
-	if not is_thread_buffer(buf, cwd) then
-		vim.notify(
-			"Codex run is only allowed in .ai/threads files under the current working directory",
-			vim.log.levels.WARN
+local function show()
+	if valid(prompt_win) and valid(history_win) then
+		vim.api.nvim_set_current_win(prompt_win)
+		return
+	end
+	M.hide()
+	changing_layout = true
+	for _, kind in ipairs({ "history", "prompt" }) do
+		local buf
+		if kind == "history" then
+			buf = history_buf
+		else
+			buf = prompt_buf
+		end
+		if not buf or not vim.api.nvim_buf_is_valid(buf) then
+			buf = vim.api.nvim_create_buf(true, true)
+			vim.bo[buf].bufhidden = "hide"
+			vim.bo[buf].filetype = "markdown"
+			vim.api.nvim_buf_set_name(buf, "codex://" .. kind)
+			if kind == "history" then
+				history_buf = buf
+			else
+				prompt_buf = buf
+			end
+		end
+	end
+	local current = vim.api.nvim_get_current_win()
+	if vim.api.nvim_win_get_config(current).relative ~= "" then
+		current = vim.fn.win_getid(vim.fn.winnr("#"))
+		vim.api.nvim_set_current_win(current)
+	end
+	if not M.is_buffer(vim.api.nvim_win_get_buf(current)) then
+		return_state = {
+			buf = vim.api.nvim_win_get_buf(current),
+			view = vim.fn.winsaveview(),
+			options = { winbar = vim.wo.winbar, wrap = vim.wo.wrap, winfixheight = vim.wo.winfixheight },
+		}
+	end
+	history_win = current
+	vim.api.nvim_win_set_buf(history_win, history_buf)
+	vim.cmd("belowright 6split")
+	prompt_win = vim.api.nvim_get_current_win()
+	vim.api.nvim_win_set_buf(prompt_win, prompt_buf)
+	vim.wo[prompt_win].winbar = " Prompt · <leader>as send "
+	vim.wo[prompt_win].winfixheight = true
+	vim.wo[history_win].wrap, vim.wo[prompt_win].wrap = true, true
+	changing_layout = false
+	render()
+	restore_views()
+end
+
+function M.toggle()
+	if valid(history_win) or valid(prompt_win) then
+		M.hide()
+	else
+		M.open()
+	end
+end
+
+function M.bookmark()
+	if not M.is_buffer() then
+		return nil
+	end
+	if not state.thread_id or state.status == "Loading" then
+		notify("Wait until the session is ready before bookmarking", vim.log.levels.WARN)
+		return nil
+	end
+	local name = state.name
+	if not name then
+		for _, entry in ipairs(state.items) do
+			if entry.item.type == "userMessage" then
+				for _, content in ipairs(entry.item.content or {}) do
+					if content.text then
+						name = content.text:match("[^\n]+")
+						break
+					end
+				end
+				if name then
+					break
+				end
+			end
+		end
+	end
+	return { value = "codex://" .. state.thread_id, context = { title = name or "New conversation" } }
+end
+
+function M.select_bookmark(id)
+	if id == state.thread_id then
+		M.open()
+	else
+		M.resume(id)
+	end
+end
+
+local function load_history(thread, callback)
+	local items = {}
+	if thread.historyMode ~= "paginated" then
+		client:request("thread/read", { threadId = thread.id, includeTurns = true }, function(result, err)
+			if err then
+				callback(nil, err)
+				return
+			end
+			for _, turn in ipairs(result.thread.turns or {}) do
+				for _, item in ipairs(turn.items) do
+					table.insert(items, { turnId = turn.id, item = item })
+				end
+			end
+			callback(items)
+		end)
+		return
+	end
+	local function page(cursor)
+		client:request(
+			"thread/items/list",
+			{ threadId = thread.id, sortDirection = "asc", limit = 100, cursor = cursor },
+			function(result, err)
+				if err then
+					callback(nil, err)
+					return
+				end
+				vim.list_extend(items, result.data)
+				if result.nextCursor then
+					page(result.nextCursor)
+				else
+					callback(items)
+				end
+			end
 		)
-		return
 	end
+	page()
+end
 
-	local command = M.config.command
-	if not command or command == "" then
-		vim.notify("Codex command is not configured", vim.log.levels.ERROR)
-		return
-	end
-
-	local input_lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-	local session_id = extract_session_id(input_lines, M.config.session_header)
-	local prompt = last_prompt(input_lines, M.config.next_prompt_marker)
-	local fallback_prompt = full_prompt(input_lines, M.config.session_header)
-	if not prompt then
-		session_id = nil
-	end
-
-	local function build_cmd(use_resume)
-		local cmd = { command, "exec" }
-		if M.config.json then
-			table.insert(cmd, "--json")
+local function load_session(id, cwd, callback)
+	state.busy, state.status = true, "Loading"
+	title()
+	ensure_client(function()
+		local params = { approvalPolicy = "on-request", approvalsReviewer = "user", sandbox = "workspace-write" }
+		if id then
+			params.threadId, params.excludeTurns = id, true
+		else
+			params.cwd = cwd
 		end
-		for _, flag in ipairs(M.config.flags or {}) do
-			table.insert(cmd, flag)
-		end
-		if use_resume then
-			table.insert(cmd, "resume")
-			table.insert(cmd, session_id)
-		end
-		table.insert(cmd, "-")
-		return cmd
-	end
-
-	vim.notify("Running Codex...", vim.log.levels.INFO)
-
-	local prev_win = vim.api.nvim_get_current_win()
-	local live_buf, live_win = open_live_window()
-	local start_time = vim.uv.hrtime()
-	local model_label = nil
-	local assistant_lines = {}
-	local raw_lines = {}
-	local debug_lines = 0
-
-	local timer = vim.uv.new_timer()
-	timer:start(0, 1000, function()
-		local elapsed = math.floor((vim.uv.hrtime() - start_time) / 1e9)
-		local minutes = math.floor(elapsed / 60)
-		local seconds = elapsed % 60
-		vim.schedule(function()
-			update_window_title(live_win, string.format("%02d:%02d", minutes, seconds), model_label)
+		client:request(id and "thread/resume" or "thread/start", params, function(result, err)
+			if err then
+				fail(err)
+				return
+			end
+			if result.thread.status.type == "active" then
+				fail("This session is active. Finish or interrupt it in its current client before resuming here.")
+				return
+			end
+			local function loaded(items, history_err)
+				if history_err then
+					fail(history_err)
+					return
+				end
+				if state.thread_id and state.thread_id ~= result.thread.id then
+					client:request("thread/unsubscribe", { threadId = state.thread_id }, function() end)
+					remember_views()
+					drafts[state.thread_id] =
+						{ text = prompt_text(), history_view = history_view, prompt_view = prompt_view }
+					local draft = drafts[result.thread.id] or { text = "" }
+					vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, vim.split(draft.text, "\n", { plain = true }))
+					history_view, prompt_view = draft.history_view, draft.prompt_view
+				end
+				state.thread_id, state.cwd, state.name = result.thread.id, result.cwd, result.thread.name
+				state.model, state.effort = result.model, result.reasoningEffort
+				state.items, state.item_index = {}, {}
+				for _, entry in ipairs(items) do
+					put_item(entry.turnId, entry.item)
+				end
+				state.loaded, state.busy, state.status, state.error = true, false, "Ready", nil
+				state.elapsed = 0
+				requests:clear()
+				render()
+				restore_views()
+				if callback then
+					callback()
+				end
+			end
+			if id then
+				load_history(result.thread, loaded)
+			else
+				loaded({})
+			end
 		end)
 	end)
+end
 
-	local function stop_timer()
-		if timer then
-			timer:stop()
-			timer:close()
-		end
+function M.open(on_ready)
+	show()
+	if not state.loaded and not state.busy then
+		load_session(state.thread_id, vim.fn.getcwd(), type(on_ready) == "function" and on_ready or nil)
+	elseif state.loaded and not state.busy and type(on_ready) == "function" then
+		on_ready()
 	end
+end
 
-	local function close_live_window()
-		if vim.api.nvim_win_is_valid(live_win) then
-			vim.api.nvim_win_close(live_win, true)
-		end
-		if vim.api.nvim_win_is_valid(prev_win) then
-			vim.api.nvim_set_current_win(prev_win)
-		end
+function M.send()
+	if state.busy then
+		notify("A turn or session operation is already in progress")
+		return
 	end
-
-	local function schedule_close_if_success(code)
-		if code ~= 0 then
+	local text = prompt_text()
+	if not text:match("%S") then
+		M.open()
+		return
+	end
+	if not state.loaded then
+		notify("Open or resume the session before sending", vim.log.levels.WARN)
+		M.open()
+		return
+	end
+	show()
+	state.busy, state.status, state.error = true, "Starting", nil
+	state.started = vim.uv.hrtime()
+	timer = vim.uv.new_timer()
+	timer:start(0, 1000, vim.schedule_wrap(title))
+	client:request("turn/start", {
+		threadId = state.thread_id,
+		input = { { type = "text", text = text } },
+		model = state.model,
+		effort = state.effort,
+	}, function(result, err)
+		if err then
+			fail(err)
 			return
 		end
-		local delay = M.config.close_delay_ms or 0
-		if delay <= 0 then
-			close_live_window()
-			return
+		-- A very short turn may complete before the start response arrives.
+		if state.busy then
+			state.turn_id = result.turn.id
 		end
-		vim.defer_fn(function()
-			close_live_window()
-		end, delay)
-	end
+		if prompt_text() == text then
+			vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, { "" })
+		end
+		title()
+	end)
+end
 
-	local function handle_result(result, extra_stderr)
-		local stdout = result.stdout or ""
-		local stderr = result.stderr or ""
-		if extra_stderr and extra_stderr:match("%S") then
-			if stderr == "" then
-				stderr = extra_stderr
+function M.new()
+	if state.busy then
+		notify("Finish or interrupt the current turn first")
+		return
+	end
+	show()
+	load_session(nil, vim.fn.getcwd())
+end
+
+function M.resume(id)
+	if state.busy then
+		notify("Finish or interrupt the current turn first")
+		return
+	end
+	show()
+	-- Another client may have appended turns since this process loaded the session.
+	-- Restart before a handoff so both agent context and displayed history come from disk.
+	if client then
+		state.busy, state.status = true, "Loading"
+		title()
+		client:restart(function(err)
+			if err then
+				fail(err)
 			else
-				stderr = extra_stderr .. "\n" .. stderr
-			end
-		end
-
-		stderr = clean_success_stderr(stderr, result.code)
-
-		local new_session_id = nil
-		if M.config.json then
-			new_session_id = parse_session_id(stdout)
-		end
-
-		local message = table.concat(assistant_lines, "\n")
-		if message == "" then
-			message = table.concat(raw_lines, "\n")
-		end
-		append_block(buf, message or "", stderr or "")
-		if new_session_id and new_session_id ~= "" then
-			ensure_session_header(buf, M.config.session_header, new_session_id)
-		end
-		stop_timer()
-		vim.notify("Codex finished", vim.log.levels.INFO)
-		play_done_sound()
-	end
-
-	local function append_progress(line)
-		local lines = line
-		if type(lines) == "string" then
-			lines = { lines }
-		end
-		vim.schedule(function()
-			append_live(live_buf, lines)
-			if vim.api.nvim_win_is_valid(live_win) then
-				local line_count = vim.api.nvim_buf_line_count(live_buf)
-				vim.api.nvim_win_set_cursor(live_win, { line_count, 0 })
+				load_session(id, vim.fn.getcwd())
 			end
 		end)
+	else
+		load_session(id, vim.fn.getcwd())
 	end
+end
 
-	local function stream_handler(line)
-		if not line or line == "" then
-			return
-		end
-		line = line:gsub("\r$", "")
-		table.insert(raw_lines, line)
-		local event = parse_stream_event(line)
-		if event and event.type == "session_meta" and event.payload then
-			local provider = event.payload.model_provider
-			local model = event.payload.model or event.payload.model_name or event.payload.model_id
-			if event.payload.model and type(event.payload.model) == "string" then
-				model = event.payload.model
-			end
-			if provider and model then
-				model_label = provider .. ":" .. model
-			elseif provider then
-				model_label = provider
-			end
-		elseif event and event.type == "turn_context" and event.payload and event.payload.model then
-			local model = event.payload.model
-			if model and model:match("%S") then
-				local provider = event.payload.model_provider
-				if provider and provider:match("%S") then
-					model_label = provider .. ":" .. model
-				else
-					model_label = model
-				end
-			end
-		end
-		if
-			event
-			and event.type == "response_item"
-			and event.payload
-			and event.payload.type == "message"
-			and event.payload.role == "assistant"
-		then
-			local content = event.payload.content or {}
-			for _, item in ipairs(content) do
-				if item.type == "output_text" or item.type == "input_text" then
-					local text_lines = vim.split(item.text or "", "\n", { plain = true })
-					for _, text_line in ipairs(text_lines) do
-						table.insert(assistant_lines, text_line)
-					end
-					append_progress(text_lines)
-				end
-			end
-		elseif
-			event
-			and event.type == "item.completed"
-			and event.item
-			and event.item.type == "agent_message"
-			and event.item.text
-		then
-			local text_lines = vim.split(event.item.text or "", "\n", { plain = true })
-			for _, text_line in ipairs(text_lines) do
-				table.insert(assistant_lines, text_line)
-			end
-			append_progress(text_lines)
-		elseif event and event.type == "thread.started" then
-			append_progress("Session started")
-		elseif event and event.type == "turn.started" then
-			append_progress("Turn started")
-		elseif event and event.type == "item.completed" and event.item and event.item.type == "reasoning" then
-			local text = event.item.text or ""
-			local title = text:match("%*%*(.-)%*%*") or "Planning"
-			append_progress("Planning: " .. title)
-		elseif event and event.type == "item.completed" and event.item and event.item.type == "file_change" then
-			local changes = event.item.changes or {}
-			for _, change in ipairs(changes) do
-				local path = change.path or "file"
-				local name = vim.fn.fnamemodify(path, ":t")
-				append_progress("Updated: " .. name)
-			end
-		elseif not event and M.config.debug and debug_lines < M.config.debug_max_lines then
-			append_progress("[debug] " .. line)
-			debug_lines = debug_lines + 1
-		elseif event and M.config.debug and debug_lines < M.config.debug_max_lines then
-			append_progress("[debug] " .. line)
-			debug_lines = debug_lines + 1
-		end
+function M.sessions(all)
+	if state.busy then
+		notify("Finish or interrupt the current turn first")
+		return
 	end
-
-	local function stderr_handler(_) end
-
-	if session_id and session_id ~= "" then
-		local job_id = run_codex_job(build_cmd(true), prompt or "\n", {
-			on_stdout = stream_handler,
-			on_stderr = stderr_handler,
-			on_exit = function(resume_result)
-				if resume_result.code == 0 then
-					handle_result(resume_result, nil)
-					schedule_close_if_success(resume_result.code)
-				else
-					local resume_err = resume_result.stderr or ""
-					local resume_note = "Resume failed (exit code " .. tostring(resume_result.code) .. ")"
-					if resume_err ~= "" then
-						resume_note = resume_note .. "\n" .. resume_err
-					end
-					vim.notify("Resume failed, running full prompt", vim.log.levels.WARN)
-					run_codex_job(build_cmd(false), fallback_prompt, {
-						on_stdout = stream_handler,
-						on_stderr = stderr_handler,
-						on_exit = function(full_result)
-							handle_result(full_result, resume_note)
-							schedule_close_if_success(full_result.code)
+	ensure_client(function()
+		local entries = {}
+		local function page(cursor)
+			client:request("thread/list", {
+				cwd = not all and vim.fn.getcwd() or nil,
+				limit = 100,
+				cursor = cursor,
+				sortKey = "updated_at",
+				sourceKinds = { "cli", "vscode", "exec", "appServer", "unknown" },
+			}, function(result, err)
+				if err then
+					notify(err, vim.log.levels.ERROR)
+					return
+				end
+				vim.list_extend(entries, result.data)
+				if result.nextCursor then
+					page(result.nextCursor)
+					return
+				end
+				if #entries == 0 then
+					notify("No saved sessions here. :CodexSessions! searches all projects.")
+					return
+				end
+				local actions = require("telescope.actions")
+				require("telescope.pickers")
+					.new({}, {
+						prompt_title = all and "Codex sessions · all projects"
+							or "Codex sessions · current directory",
+						finder = require("telescope.finders").new_table({
+							results = entries,
+							entry_maker = function(thread)
+								local label = (thread.name or thread.preview or thread.id):gsub("\n", " ")
+								label = os.date("%Y-%m-%d %H:%M", thread.updatedAt) .. "  " .. label
+								if all then
+									label = label .. "  [" .. thread.cwd .. "]"
+								end
+								return { value = thread, display = label, ordinal = label }
+							end,
+						}),
+						sorter = require("telescope.config").values.generic_sorter({}),
+						attach_mappings = function(buf)
+							actions.select_default:replace(function()
+								local entry = require("telescope.actions.state").get_selected_entry()
+								actions.close(buf)
+								if entry then
+									M.resume(entry.value.id)
+								end
+							end)
+							return true
 						end,
 					})
+					:find()
+			end)
+		end
+		page()
+	end)
+end
+
+function M.models()
+	if state.busy then
+		notify("Select a model after the current turn finishes")
+		return
+	end
+	if not state.loaded then
+		M.open(M.models)
+		return
+	end
+	local thread_id = state.thread_id
+	local models = {}
+	local function page(cursor)
+		client:request("model/list", { limit = 100, cursor = cursor }, function(result, err)
+			if err then
+				notify(err, vim.log.levels.ERROR)
+				return
+			end
+			vim.list_extend(models, result.data)
+			if result.nextCursor then
+				page(result.nextCursor)
+				return
+			end
+			vim.ui.select(models, {
+				prompt = "Codex model (current: " .. state.model .. ")",
+				format_item = function(model)
+					return model.displayName .. " · " .. model.model
+				end,
+			}, function(model)
+				if not model then
+					return
 				end
-			end,
-		})
-		if not job_id then
-			stop_timer()
-			close_live_window()
-			vim.notify("Failed to start Codex job", vim.log.levels.ERROR)
+				vim.ui.select(model.supportedReasoningEfforts, {
+					prompt = "Reasoning effort",
+					format_item = function(effort)
+						return effort.reasoningEffort .. " — " .. effort.description
+					end,
+				}, function(effort)
+					if not effort or state.busy or state.thread_id ~= thread_id then
+						return
+					end
+					state.model, state.effort = model.model, effort.reasoningEffort
+					title()
+					notify("Next message: " .. state.model .. " · " .. state.effort)
+				end)
+			end)
+		end)
+	end
+	page()
+end
+
+function M.files()
+	if not state.loaded then
+		M.open(M.files)
+		return
+	end
+	local cwd, thread_id = state.cwd, state.thread_id
+	vim.system({ "rg", "--files", "--hidden", "-g", "!.git", "-0" }, { cwd = cwd }, function(result)
+		vim.schedule(function()
+			if result.code > 1 then
+				notify(result.stderr, vim.log.levels.ERROR)
+				return
+			end
+			local paths, seen = { "./" }, { ["./"] = true }
+			for path in result.stdout:gmatch("[^%z]+") do
+				table.insert(paths, path)
+				local directory = vim.fs.dirname(path)
+				while directory and directory ~= "." do
+					if not seen[directory] then
+						table.insert(paths, directory .. "/")
+						seen[directory] = true
+					end
+					directory = vim.fs.dirname(directory)
+				end
+			end
+			table.sort(paths)
+			local actions = require("telescope.actions")
+			require("telescope.pickers")
+				.new({}, {
+					prompt_title = "Codex files / directories · Tab select · Enter add",
+					finder = require("telescope.finders").new_table({ results = paths }),
+					sorter = require("telescope.config").values.generic_sorter({}),
+					attach_mappings = function(buf)
+						actions.select_default:replace(function()
+							local picker = require("telescope.actions.state").get_current_picker(buf)
+							local selections = picker:get_multi_selection()
+							if #selections == 0 then
+								selections = { require("telescope.actions.state").get_selected_entry() }
+							end
+							actions.close(buf)
+							if state.thread_id ~= thread_id then
+								notify("Session changed; select files again")
+								return
+							end
+							local lines = { "", "Files/directories to use as context (read from disk):" }
+							for _, entry in ipairs(selections) do
+								-- JSON quoting keeps paths containing whitespace or newlines unambiguous.
+								table.insert(lines, "- " .. vim.json.encode(vim.fs.joinpath(cwd, entry.value)))
+							end
+							show()
+							vim.api.nvim_buf_set_lines(prompt_buf, -1, -1, false, lines)
+						end)
+						return true
+					end,
+				})
+				:find()
+		end)
+	end)
+end
+
+function M.interrupt()
+	if not state.turn_id then
+		notify("No running turn to interrupt")
+		return
+	end
+	client:request("turn/interrupt", { threadId = state.thread_id, turnId = state.turn_id }, function(_, err)
+		if err then
+			notify(err, vim.log.levels.ERROR)
 		end
+	end)
+end
+
+function M.approval()
+	if requests and #requests.queue > 0 then
+		requests:show()
 	else
-		local job_id = run_codex_job(build_cmd(false), fallback_prompt, {
-			on_stdout = stream_handler,
-			on_stderr = stderr_handler,
-			on_exit = function(result)
-				handle_result(result, nil)
-				schedule_close_if_success(result.code)
-			end,
-		})
-		if not job_id then
-			stop_timer()
-			close_live_window()
-			vim.notify("Failed to start Codex job", vim.log.levels.ERROR)
-		end
+		notify("No pending requests")
 	end
 end
 
 function M.setup(opts)
 	M.config = vim.tbl_deep_extend("force", M.config, opts or {})
-	vim.api.nvim_create_user_command("CodexRun", function()
-		M.run()
-	end, { desc = "Run Codex on current thread buffer" })
-	vim.keymap.set("n", "<leader>ac", function()
-		M.run()
-	end, { desc = "Codex: run thread" })
+	for _, entry in ipairs({
+		{ "Codex", "<leader>ac", M.toggle, "switch code / chat" },
+		{ "CodexNew", "<leader>an", M.new, "new session" },
+		{ "CodexSend", "<leader>as", M.send, "send prompt" },
+		{ "CodexModel", "<leader>am", M.models, "select model / effort" },
+		{ "CodexFiles", "<leader>af", M.files, "add files / directories" },
+		{ "CodexApproval", "<leader>ap", M.approval, "pending approval / question" },
+		{ "CodexInterrupt", "<leader>ax", M.interrupt, "interrupt turn" },
+	}) do
+		vim.api.nvim_create_user_command(entry[1], entry[3], { desc = "Codex: " .. entry[4] })
+		vim.keymap.set("n", entry[2], entry[3], { desc = "Codex: " .. entry[4] })
+	end
+	vim.api.nvim_create_user_command("CodexSessions", function(args)
+		M.sessions(args.bang)
+	end, { bang = true })
+	vim.keymap.set("n", "<leader>ar", function()
+		M.sessions(false)
+	end, { desc = "Codex: resume session" })
+	vim.api.nvim_create_user_command("CodexResume", function(args)
+		M.resume(args.args)
+	end, { nargs = 1 })
+	vim.api.nvim_create_user_command("CodexRefresh", function()
+		if state.thread_id then
+			M.resume(state.thread_id)
+		else
+			M.open()
+		end
+	end, {})
+	vim.api.nvim_create_user_command("CodexRun", M.send, { desc = "Codex: send prompt" })
+	local group = vim.api.nvim_create_augroup("CustomCodex", { clear = true })
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		group = group,
+		callback = function()
+			state.exiting = true
+			stop_timer()
+			if client then
+				client:stop()
+			end
+		end,
+	})
+	vim.api.nvim_create_autocmd("QuitPre", {
+		group = group,
+		callback = function()
+			if changing_layout then
+				return
+			end
+			local win = vim.api.nvim_get_current_win()
+			if win ~= history_win and win ~= prompt_win then
+				return
+			end
+			local sibling = win == prompt_win and history_win or prompt_win
+			if valid(sibling) then
+				leave_view(sibling, true, win)
+			end
+		end,
+	})
+	vim.api.nvim_create_autocmd("BufEnter", {
+		group = group,
+		callback = function(args)
+			if changing_layout then
+				return
+			end
+			local win = vim.api.nvim_get_current_win()
+			if (win == history_win or win == prompt_win) and not M.is_buffer(args.buf) then
+				-- Telescope, :buffer, and ordinary file navigation replace the whole chat view.
+				leave_view(win, false)
+			elseif not history_win and not prompt_win and M.is_buffer(args.buf) then
+				vim.schedule(function()
+					if vim.api.nvim_get_current_buf() == args.buf and not history_win then
+						M.open()
+					end
+				end)
+			end
+		end,
+	})
+	vim.api.nvim_create_autocmd("BufLeave", {
+		group = group,
+		callback = function(args)
+			if not changing_layout and M.is_buffer(args.buf) then
+				remember_views()
+			end
+		end,
+	})
+	vim.api.nvim_create_autocmd("WinClosed", {
+		group = group,
+		callback = function(args)
+			if changing_layout then
+				return
+			end
+			local closed = tonumber(args.match)
+			if closed == history_win or closed == prompt_win then
+				vim.schedule(function()
+					if closed == history_win or closed == prompt_win then
+						M.hide()
+					end
+				end)
+			end
+		end,
+	})
 end
 
 return M
