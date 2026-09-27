@@ -123,6 +123,10 @@ function M.new(command, opts, handlers)
 		self.job = job
 	end
 
+	function process:pid()
+		return self.job and vim.fn.jobpid(self.job)
+	end
+
 	function process:stop()
 		self.stopping = true
 		if self.job then

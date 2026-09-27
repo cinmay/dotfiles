@@ -15,13 +15,17 @@ local mode_names = {
 	dontAsk = "Don't ask",
 	bypassPermissions = "Bypass permissions",
 }
+-- Bypass is left out of the menu: Claude Code only allows it when launched with a flag.
+local selectable_modes = { "default", "acceptEdits", "plan", "auto", "dontAsk" }
 
 local state = { entries = {}, tools = {}, requests = {}, status = "Ready", busy = false }
+local sessions = require("custom.claude.sessions")
 local process, timer
 local history_buf, prompt_buf, request_buf, history_win, prompt_win
 local render_pending = false
 local return_state, history_view, prompt_view
 local changing_layout = false
+local drafts = {}
 
 local function notify(message, level)
 	vim.notify("Claude: " .. message, level or vim.log.levels.INFO)
@@ -56,17 +60,23 @@ local function title()
 	if state.started then
 		elapsed = math.floor((vim.uv.hrtime() - state.started) / 1e9)
 	end
-	local status = #state.requests > 0 and "Response required" or state.status
-	vim.wo[history_win].winbar = string
-		.format(
-			" Claude · %s · %s · %s · %02d:%02d ",
-			model_name(),
-			mode_names[state.mode] or state.mode or "loading mode",
-			status,
-			math.floor(elapsed / 60),
-			elapsed % 60
-		)
-		:gsub("%%", "%%%%")
+	local parts = {
+		"Claude",
+		model_name(),
+		state.effort or "default effort",
+		mode_names[state.mode] or state.mode or "loading mode",
+		#state.requests > 0 and "Response required" or state.status,
+		string.format("%02d:%02d", math.floor(elapsed / 60), elapsed % 60),
+	}
+	if state.context_tokens and state.context_window then
+		table.insert(parts, string.format("ctx %d%%", math.floor(state.context_tokens * 100 / state.context_window + 0.5)))
+	elseif state.context_tokens then
+		table.insert(parts, string.format("ctx %dk", math.floor(state.context_tokens / 1000 + 0.5)))
+	end
+	if state.five_hour then
+		table.insert(parts, "5h " .. state.five_hour .. "%")
+	end
+	vim.wo[history_win].winbar = (" " .. table.concat(parts, " · ") .. " "):gsub("%%", "%%%%")
 end
 
 local function add(entry)
@@ -268,7 +278,8 @@ local function on_message(message)
 			state.mode, state.cwd = message.permissionMode, message.cwd
 		elseif message.subtype == "status" then
 			state.mode = message.permissionMode or state.mode
-		elseif type(message.content) == "string" then
+		elseif type(message.content) == "string" and message.subtype ~= "away_summary" then
+			-- Notices such as a safety fallback matter; the "while you were away" recap does not.
 			add({ kind = "notice", text = message.content })
 		end
 	elseif message.type == "stream_event" then
@@ -279,6 +290,12 @@ local function on_message(message)
 			state.live.text = state.live.text .. event.delta.text
 		end
 	elseif message.type == "assistant" then
+		local usage = message.message.usage
+		if usage then
+			state.context_tokens = (usage.input_tokens or 0)
+				+ (usage.cache_read_input_tokens or 0)
+				+ (usage.cache_creation_input_tokens or 0)
+		end
 		for _, block in ipairs(message.message.content or {}) do
 			if block.type == "text" then
 				-- The finished block is authoritative; it replaces what was streamed.
@@ -300,7 +317,15 @@ local function on_message(message)
 				tool.status = block.is_error and "error" or "done"
 			end
 		end
+	elseif message.type == "rate_limit_event" then
+		local windows = (message.rate_limit_info or {}).unifiedWindows or {}
+		local window = windows.five_hour
+		if window then
+			state.five_hour = math.floor(window.utilization * 100 + 0.5)
+		end
 	elseif message.type == "result" then
+		local usage = (message.modelUsage or {})[state.model]
+		state.context_window = usage and usage.contextWindow or state.context_window
 		on_result(message)
 		return
 	end
@@ -331,7 +356,8 @@ local function start_session(resume_id)
 	end
 	clear_requests()
 	if not resume_id then
-		state.entries, state.tools, state.session_id, state.model = {}, {}, nil, nil
+		state.entries, state.tools, state.session_id, state.title = {}, {}, nil, nil
+		state.model, state.effort, state.context_tokens, state.context_window = nil, nil, nil, nil
 		state.cwd = vim.fn.getcwd()
 	end
 	state.error, state.live, state.ready, state.elapsed = nil, nil, false, 0
@@ -465,6 +491,7 @@ end
 
 local chat_keymaps = {
 	{ "<leader>as", "send", "send prompt" },
+	{ "<leader>am", "models", "model, effort, and permission mode" },
 	{ "<leader>ax", "interrupt", "interrupt turn" },
 }
 
@@ -536,13 +563,224 @@ function M.open()
 	end
 end
 
+-- Drafts and reading positions are kept per conversation; an unsent chat is "new".
+local function switch_draft(target)
+	remember_views()
+	drafts[state.session_id or "new"] = { text = prompt_text(), history_view = history_view, prompt_view = prompt_view }
+	local draft = drafts[target or "new"] or { text = "" }
+	drafts[target or "new"] = nil
+	vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, vim.split(draft.text, "\n", { plain = true }))
+	history_view, prompt_view = draft.history_view, draft.prompt_view
+end
+
 function M.new()
 	if state.started then
 		notify("Finish or interrupt the current turn first")
 		return
 	end
 	show()
+	if state.session_id then
+		switch_draft(nil)
+	end
 	start_session()
+end
+
+-- A failed resume leaves the current conversation untouched.
+function M.resume(id)
+	if state.started then
+		notify("Finish or interrupt the current turn first")
+		return
+	end
+	local session, err = sessions.read(id)
+	if not session then
+		notify(err, vim.log.levels.ERROR)
+		return
+	end
+	if not session.cwd or vim.fn.isdirectory(session.cwd) == 0 then
+		notify("The session's directory no longer exists: " .. tostring(session.cwd), vim.log.levels.ERROR)
+		return
+	end
+	local pid = sessions.running(id, process and process:pid())
+	if pid then
+		notify("This session is open in another Claude process (pid " .. pid .. "); close it there first", vim.log.levels.WARN)
+		return
+	end
+	show()
+	if id ~= state.session_id then
+		switch_draft(id)
+	end
+	state.entries, state.tools, state.live = {}, {}, nil
+	state.session_id, state.title, state.cwd = id, session.title, session.cwd
+	state.model, state.effort, state.context_tokens, state.context_window = session.model, session.effort, nil, nil
+	-- Stored entries have the same shape as live messages, except typed prompts.
+	for _, entry in ipairs(session.entries) do
+		local prompt = sessions.prompt_text(entry)
+		if prompt then
+			add({ kind = "user", text = prompt })
+		else
+			on_message(entry)
+		end
+	end
+	start_session(id)
+	restore_views()
+end
+
+function M.sessions(all)
+	if state.started then
+		notify("Finish or interrupt the current turn first")
+		return
+	end
+	local found = sessions.list(not all and vim.fn.getcwd() or nil)
+	if #found == 0 then
+		notify("No saved sessions here. :ClaudeSessions! searches all projects.")
+		return
+	end
+	local actions = require("telescope.actions")
+	require("telescope.pickers")
+		.new({}, {
+			prompt_title = all and "Claude sessions · all projects" or "Claude sessions · current directory",
+			finder = require("telescope.finders").new_table({
+				results = found,
+				entry_maker = function(session)
+					local label = os.date("%Y-%m-%d %H:%M", session.updated) .. "  " .. session.title:gsub("%c", " ")
+					if all then
+						label = label .. "  [" .. (session.cwd or "?") .. "]"
+					end
+					return { value = session, display = label, ordinal = label }
+				end,
+			}),
+			sorter = require("telescope.config").values.generic_sorter({}),
+			attach_mappings = function(buf)
+				actions.select_default:replace(function()
+					local entry = require("telescope.actions.state").get_selected_entry()
+					actions.close(buf)
+					if entry then
+						M.resume(entry.value.id)
+					end
+				end)
+				return true
+			end,
+		})
+		:find()
+end
+
+function M.bookmark()
+	if not M.is_buffer() then
+		return nil
+	end
+	local name = state.title
+	for _, entry in ipairs(state.entries) do
+		if not name and entry.kind == "user" then
+			name = entry.text:match("[^\n]+")
+		end
+	end
+	if not state.session_id or not name then
+		notify("Send a message before bookmarking", vim.log.levels.WARN)
+		return nil
+	end
+	return { value = "claude://" .. state.session_id, context = { title = name } }
+end
+
+function M.select_bookmark(id)
+	if id == state.session_id then
+		M.open()
+	else
+		M.resume(id)
+	end
+end
+
+local function change(subtype, fields, apply)
+	process:control(subtype, fields, function(response, err)
+		if err then
+			notify(err, vim.log.levels.ERROR)
+			return
+		end
+		apply(response)
+		title()
+	end)
+end
+
+local function current_model()
+	for _, model in ipairs(state.models or {}) do
+		if model.resolvedModel == state.model or (not state.model and model.value == "default") then
+			return model
+		end
+	end
+end
+
+-- One menu for the settings Claude lets a session change: model, effort, and permission mode.
+function M.models()
+	if not state.ready then
+		notify("Wait until the chat is ready")
+		M.open()
+		return
+	end
+	local settings = {
+		{
+			label = "Model: " .. model_name(),
+			pick = function()
+				vim.ui.select(state.models or {}, {
+					prompt = "Claude model",
+					format_item = function(model)
+						return model.displayName .. (model.description and " — " .. model.description or "")
+					end,
+				}, function(model)
+					if model then
+						change("set_model", { model = model.value }, function()
+							state.model = model.resolvedModel
+							notify("Model: " .. model_name())
+						end)
+					end
+				end)
+			end,
+		},
+		{
+			label = "Effort: " .. (state.effort or "default effort"),
+			pick = function()
+				local levels = (current_model() or {}).supportedEffortLevels
+				if not levels then
+					notify("This model has no effort setting")
+					return
+				end
+				vim.ui.select(levels, { prompt = "Reasoning effort" }, function(level)
+					if level then
+						change("apply_flag_settings", { settings = { effortLevel = level } }, function()
+							state.effort = level
+							notify("Effort: " .. level)
+						end)
+					end
+				end)
+			end,
+		},
+		{
+			label = "Permission mode: " .. (mode_names[state.mode] or state.mode or "unknown"),
+			pick = function()
+				vim.ui.select(selectable_modes, {
+					prompt = "Permission mode",
+					format_item = function(mode)
+						return mode_names[mode]
+					end,
+				}, function(mode)
+					if mode then
+						change("set_permission_mode", { mode = mode }, function(response)
+							state.mode = response.mode or mode
+							notify("Permission mode: " .. mode_names[state.mode])
+						end)
+					end
+				end)
+			end,
+		},
+	}
+	vim.ui.select(settings, {
+		prompt = "Claude settings",
+		format_item = function(setting)
+			return setting.label
+		end,
+	}, function(setting)
+		if setting then
+			setting.pick()
+		end
+	end)
 end
 
 function M.send()
@@ -598,7 +836,17 @@ function M.setup(opts)
 	vim.api.nvim_create_user_command("ClaudeNew", M.new, { desc = "Claude: new chat" })
 	vim.api.nvim_create_user_command("ClaudeSend", M.send, { desc = "Claude: send prompt" })
 	vim.api.nvim_create_user_command("ClaudeInterrupt", M.interrupt, { desc = "Claude: interrupt turn" })
+	vim.api.nvim_create_user_command("ClaudeModel", M.models, { desc = "Claude: model, effort, and permission mode" })
+	vim.api.nvim_create_user_command("ClaudeSessions", function(args)
+		M.sessions(args.bang)
+	end, { bang = true, desc = "Claude: resume a session" })
+	vim.api.nvim_create_user_command("ClaudeResume", function(args)
+		M.resume(args.args)
+	end, { nargs = 1, desc = "Claude: resume a session by id" })
 	vim.keymap.set("n", "<leader>ana", M.new, { desc = "Claude: new chat" })
+	vim.keymap.set("n", "<leader>ara", function()
+		M.sessions(false)
+	end, { desc = "Claude: resume session" })
 	local group = vim.api.nvim_create_augroup("CustomClaude", { clear = true })
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		group = group,

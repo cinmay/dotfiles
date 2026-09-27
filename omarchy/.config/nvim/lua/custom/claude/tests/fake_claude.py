@@ -11,7 +11,15 @@ for flag in ("--input-format", "--output-format", "--include-partial-messages", 
     assert flag in args, args
 session = args[args.index("--resume") + 1] if "--resume" in args else "fake-session"
 model = "claude-opus-5-5"
+mode = "auto"
 cwd = os.getcwd()
+MODELS = [
+    {"value": "default", "resolvedModel": "claude-opus-5-5", "displayName": "Default (recommended)",
+     "supportedEffortLevels": ["low", "high"]},
+    {"value": "opus", "resolvedModel": "claude-opus-5-5", "displayName": "Opus 5.5", "supportedEffortLevels": ["low", "high"]},
+    {"value": "claude-opus-4-8", "resolvedModel": "claude-opus-4-8", "displayName": "Opus 4.8",
+     "supportedEffortLevels": ["low", "high"]},
+]
 waiting = {}  # request_id -> scenario, for requests sent to Neovim
 
 
@@ -25,7 +33,7 @@ def send(message):
 
 def system_init():
     send({"type": "system", "subtype": "init", "session_id": session, "model": model,
-          "permissionMode": "auto", "cwd": cwd})
+          "permissionMode": mode, "cwd": cwd})
 
 
 def text(message_id, value, parent=None):
@@ -37,8 +45,10 @@ def text(message_id, value, parent=None):
         for part in (value[:2], value[2:]):
             send({"type": "stream_event", "event": {"type": "content_block_delta", "index": 0,
                   "delta": {"type": "text_delta", "text": part}}, "parent_tool_use_id": None})
+    usage = {"input_tokens": 2, "cache_read_input_tokens": 20000, "cache_creation_input_tokens": 10000, "output_tokens": 5}
     send({"type": "assistant", "parent_tool_use_id": parent, "session_id": session,
-          "message": {"id": message_id, "role": "assistant", "content": [{"type": "text", "text": value}]}})
+          "message": {"id": message_id, "role": "assistant", "usage": usage,
+                      "content": [{"type": "text", "text": value}]}})
 
 
 def tool(tool_id, name, tool_input):
@@ -55,7 +65,7 @@ def tool_result(tool_id, is_error=False):
 
 def result(subtype="success", is_error=False, errors=None, value=""):
     send({"type": "result", "subtype": subtype, "is_error": is_error, "errors": errors,
-          "result": value, "session_id": session})
+          "result": value, "session_id": session, "modelUsage": {model: {"contextWindow": 1000000}}})
 
 
 def ask(scenario, tool_name, tool_input, **extra):
@@ -99,11 +109,19 @@ for line in sys.stdin:
     if message["type"] == "control_request":
         subtype = message["request"]["subtype"]
         reply = {"type": "control_response", "response": {"subtype": "success", "request_id": message["request_id"]}}
+        request = message["request"]
         if subtype == "initialize":
-            reply["response"]["response"] = {"current_permission_mode": "auto", "models": [
-                {"value": "default", "resolvedModel": "claude-opus-5-5", "displayName": "Default (recommended)"},
-                {"value": "opus", "resolvedModel": "claude-opus-5-5", "displayName": "Opus 5.5"},
-                {"value": "claude-opus-4-8", "resolvedModel": "claude-opus-4-8", "displayName": "Opus 4.8"}]}
+            reply["response"]["response"] = {"current_permission_mode": mode, "models": MODELS}
+            send(reply)
+        elif subtype == "set_model":
+            model = next(m["resolvedModel"] for m in MODELS if m["value"] == request["model"])
+            send(reply)
+        elif subtype == "apply_flag_settings":
+            assert request["settings"] == {"effortLevel": "low"}, request
+            send(reply)
+        elif subtype == "set_permission_mode":
+            mode = request["mode"]
+            reply["response"]["response"] = {"mode": mode}
             send(reply)
         elif subtype == "interrupt":
             reply["response"]["response"] = {"still_queued": []}
@@ -124,6 +142,8 @@ for line in sys.stdin:
         waiting["unsupported-1"] = "unsupported"
         send({"type": "control_request", "request_id": "unsupported-1", "request": {"subtype": "hook_callback"}})
         text("msg-subagent", "DO NOT SHOW", parent="toolu_agent")
+        send({"type": "rate_limit_event", "session_id": session, "rate_limit_info": {
+            "status": "allowed", "unifiedWindows": {"five_hour": {"utilization": 0.12}}}})
         tool("toolu_read", "Read", {"file_path": cwd + "/calc.py"})
         tool_result("toolu_read")
         text("msg-final", "Høllo — final authoritative text")
