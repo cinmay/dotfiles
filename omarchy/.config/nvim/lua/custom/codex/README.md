@@ -21,8 +21,8 @@ APIs; future Codex protocol changes may require updating this client.
 
 | Key | Command | Action |
 | --- | --- | --- |
-| `<leader>an` | `:CodexNew` | Start a session in Neovim's current directory |
-| `<leader>ar` | `:CodexSessions` | Pick a saved session in the current directory |
+| `<leader>ano` | `:CodexNew` | Start a session in Neovim's current directory |
+| `<leader>aro` | `:CodexSessions` | Pick a saved session in the current directory |
 | | `:CodexSessions!` | Pick from all project directories |
 | | `:CodexResume <id>` | Resume a specific session |
 | | `:CodexRefresh` | Reload the current session from Codex, keeping the draft |
@@ -31,6 +31,9 @@ APIs; future Codex protocol changes may require updating this client.
 | `<leader>af` | `:CodexFiles` | Insert file/directory references into the prompt |
 | `<leader>ap` | `:CodexApproval` | Open a pending approval or question |
 | `<leader>ax` | `:CodexInterrupt` | Interrupt the running turn |
+
+`<leader>ano` and `<leader>aro` work everywhere (`o` for OpenAI; Claude uses `a`).
+The other keys exist only in the chat buffers, so they cannot fire from code.
 
 Chat uses two ordinary listed buffers in the current tab: history above an
 18-line prompt. They replace the current code window. Use normal Neovim editing,
@@ -94,7 +97,7 @@ global Codex configuration is not edited. Codex decides which actions require
 approval; this is not a confirmation dialog for every tool call or edit.
 
 New requests notify you and show `Response required` in the history winbar
-without taking focus. Use `<leader>ap` to open the dialog. It shows the
+without taking focus. Use `<leader>ap` in the chat to open the dialog. It shows the
 command/network destination, requested permissions, or proposed file diffs.
 The applicable choices are:
 
@@ -118,7 +121,7 @@ the CLI, and the desktop app's Codex integration. Finish or interrupt the turn
 before switching. This client supports one selected session at a time and
 sequential handoff, not simultaneous control of a running turn in another client.
 
-- In Neovim: `<leader>ar`, `:CodexSessions!`, or `:CodexResume <id>`.
+- In Neovim: `<leader>aro`, `:CodexSessions!`, or `:CodexResume <id>`.
 - In the CLI: `codex resume <id>`. For older non-interactive sessions, the CLI
   picker may need `codex resume --include-non-interactive --all`.
 - In the desktop app: open the same local Codex session/project. Desktop filters

@@ -104,7 +104,7 @@ local function render()
 		add("\n## Error\n\n" .. state.error)
 	end
 	if #state.items == 0 then
-		add("\nWrite a prompt below. <leader>as sends; <leader>ar resumes a session.")
+		add("\nWrite a prompt below. <leader>as sends; <leader>aro resumes a session.")
 	end
 	local follow = valid(history_win)
 		and vim.api.nvim_win_get_cursor(history_win)[1] >= vim.api.nvim_buf_line_count(history_buf) - 1
@@ -308,6 +308,14 @@ function M.is_buffer(buf)
 	return buf == history_buf or buf == prompt_buf
 end
 
+local chat_keymaps = {
+	{ "<leader>as", "send", "send prompt" },
+	{ "<leader>am", "models", "select model / effort" },
+	{ "<leader>af", "files", "add files / directories" },
+	{ "<leader>ap", "approval", "pending approval / question" },
+	{ "<leader>ax", "interrupt", "interrupt turn" },
+}
+
 local function show()
 	if valid(prompt_win) and valid(history_win) then
 		vim.api.nvim_set_current_win(prompt_win)
@@ -333,6 +341,12 @@ local function show()
 			end
 			vim.bo[buf].filetype = "markdown"
 			vim.api.nvim_buf_set_name(buf, "codex://" .. kind)
+			-- Chat keys exist only in the chat, so they cannot fire from code by accident.
+			for _, entry in ipairs(chat_keymaps) do
+				vim.keymap.set("n", entry[1], function()
+					M[entry[2]]()
+				end, { buffer = buf, desc = "Codex: " .. entry[3] })
+			end
 			if kind == "history" then
 				history_buf = buf
 			else
@@ -772,20 +786,20 @@ end
 function M.setup(opts)
 	M.config = vim.tbl_deep_extend("force", M.config, opts or {})
 	for _, entry in ipairs({
-		{ "CodexNew", "<leader>an", M.new, "new session" },
-		{ "CodexSend", "<leader>as", M.send, "send prompt" },
-		{ "CodexModel", "<leader>am", M.models, "select model / effort" },
-		{ "CodexFiles", "<leader>af", M.files, "add files / directories" },
-		{ "CodexApproval", "<leader>ap", M.approval, "pending approval / question" },
-		{ "CodexInterrupt", "<leader>ax", M.interrupt, "interrupt turn" },
+		{ "CodexNew", M.new, "new session" },
+		{ "CodexSend", M.send, "send prompt" },
+		{ "CodexModel", M.models, "select model / effort" },
+		{ "CodexFiles", M.files, "add files / directories" },
+		{ "CodexApproval", M.approval, "pending approval / question" },
+		{ "CodexInterrupt", M.interrupt, "interrupt turn" },
 	}) do
-		vim.api.nvim_create_user_command(entry[1], entry[3], { desc = "Codex: " .. entry[4] })
-		vim.keymap.set("n", entry[2], entry[3], { desc = "Codex: " .. entry[4] })
+		vim.api.nvim_create_user_command(entry[1], entry[2], { desc = "Codex: " .. entry[3] })
 	end
+	vim.keymap.set("n", "<leader>ano", M.new, { desc = "Codex: new session" })
 	vim.api.nvim_create_user_command("CodexSessions", function(args)
 		M.sessions(args.bang)
 	end, { bang = true })
-	vim.keymap.set("n", "<leader>ar", function()
+	vim.keymap.set("n", "<leader>aro", function()
 		M.sessions(false)
 	end, { desc = "Codex: resume session" })
 	vim.api.nvim_create_user_command("CodexResume", function(args)
