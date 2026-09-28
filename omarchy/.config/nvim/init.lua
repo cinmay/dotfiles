@@ -822,6 +822,7 @@ require("lazy").setup({
 				"go",
 				"html",
 				"javascript",
+				"json",
 				"lua",
 				"luadoc",
 				"markdown",
