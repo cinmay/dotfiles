@@ -8,28 +8,34 @@ Do not prematurely abstract. Only share code when it represents the same underly
 
 Strive for small, cohesive changes. Solve one problem completely and keep unrelated cleanup separate. Small changes are easier to review, understand, and roll back. Work towards the smallest coherent change.
 
-Test behavior, not implementation. Verify meaningful outcomes, important failure cases, and regressions. Test should survive to work and survive internal changes when implementation details change, but the behavior remains the same. Using BDD's given-when-then format is encouraged. The tests should start with three commented lines: Given, When, Then.
+Test behavior, not implementation. Verify meaningful outcomes, important failure cases, and regressions. A test should keep passing when implementation details change and the behavior stays the same.
 
-The test should also be split into three sections: given , when, then. Try to always start the given section with the expected outcome first. Test should focus on outcome. 
+Write tests in given-when-then form so they read from intent to verification:
+- Start each test with three lines of BDD metadata that describe this test in plain words: Given some initial context, When an event occurs, Then the expected outcome. Use the project's BDD helper when it has one; otherwise use three comment lines.
+- Split the body into three visible sections: // Given, // When, // Then.
+- Start the Given section with the expected result. This makes the test's purpose clear before the setup details.
+- Keep each test to one behavior and give it a specific name. Split creation, idempotency, validation, and error cases into separate tests.
+- Move noisy setup and repeated assertions into local test helpers when that makes the test read like behavior.
+
+Adapt the syntax to the project's language and test framework.
 
 Example:
-// given: the expected outcome
-// when: the action that triggers the behavior
-// then: the expected result of the action
 
-test feature "some feature" {
+// Given a customer with no orders.
+// When their order summary is requested.
+// Then an empty summary is returned.
+test "order summary: no orders gives an empty summary" {
+    // Given
+    expected = emptyOrderSummary()
+    customer = createCustomer()
 
-// Given
+    // When
+    actual = summaryFor(customer)
 
-var expectedOutcome = "some expected outcome";
-
-// when
-
-var outcome = someFunctionThatTriggersBehavior();
-
-// then
-assert.equal(outcome, expectedOutcome);
+    // Then
+    assertEqual(actual, expected)
 }
+
 Add documentation where it helps explain the purpose, business rules, constraints, and non-obvious decisions. The documentation is primarily meant for AI. Include useful context that cannot easily be understood from the code. Avoid repeating implementation details, and update existing documentation when behavior changes.
 
 Try to document features with a user story focused on one user goal. The keyword "and" can indicate that a story contains unrelated goals, but it is not a problem by itself. Keep related behavior together when it serves one coherent goal. Use other documentation formats when a user story is not a good fit.
