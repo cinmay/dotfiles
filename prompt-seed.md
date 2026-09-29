@@ -3,8 +3,8 @@ Keep in mind good engineering practices, such as KISS, YAGNI.
 Aim for low coupling and high cohesion and separation of concerns. If the code is changed together, it should stay together.
 Avoid adding new dependencies without a clear benefit.
 Prefer clear names, straightforward control flow, and familiar project conventions. Explain non-obvious decisions in comments.
-Do not prematurely abstract. Only share code when it represents the same underlying concept or business rule. Avoid duplicating business logic or behavior.
-Otherwise apply Martin Fowler’s rule of three: “When you have three instances of the same thing, it is time to abstract.”
+
+Do not prematurely abstract. Only share code when it represents the same underlying concept or business rule. Never duplicate a business rule; duplicate incidental code freely until the third copy by applying Martin Fowler’s rule of three.
 
 Strive for small, cohesive changes. Solve one problem completely and keep unrelated cleanup separate. Small changes are easier to review, understand, and roll back. Work towards the smallest coherent change.
 
@@ -17,7 +17,9 @@ Example:
 // when: the action that triggers the behavior
 // then: the expected result of the action
 
-// Given:
+test feature "some feature" {
+
+// Given
 
 var expectedOutcome = "some expected outcome";
 
@@ -27,6 +29,7 @@ var outcome = someFunctionThatTriggersBehavior();
 
 // then
 assert.equal(outcome, expectedOutcome);
+}
 Add documentation where it helps explain the purpose, business rules, constraints, and non-obvious decisions. The documentation is primarily meant for AI. Include useful context that cannot easily be understood from the code. Avoid repeating implementation details, and update existing documentation when behavior changes.
 
 Try to document features with a user story focused on one user goal. The keyword "and" can indicate that a story contains unrelated goals, but it is not a problem by itself. Keep related behavior together when it serves one coherent goal. Use other documentation formats when a user story is not a good fit.
