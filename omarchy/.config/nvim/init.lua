@@ -244,8 +244,9 @@ vim.keymap.set("n", "G", "Gzz", { desc = "Go to line and center cursor" })
 -- Toggles
 vim.keymap.set("n", "<leader>ta", ":ASToggle<CR>", { desc = "toggle auto save" })
 
--- Codex chat, session history, and approvals
+-- Codex and Claude chats, session history, and approvals
 require("custom.codex").setup()
+require("custom.claude").setup()
 
 require("local_tts").setup({
 	endpoint = "http://127.0.0.1:8880/v1/audio/speech",
@@ -430,6 +431,9 @@ require("lazy").setup({
 				{ "<leader>s", group = "[S]earch" },
 				{ "<leader>t", group = "[T]oggle" },
 				{ "<leader>h", group = "Git [H]unk", mode = { "n", "v" } },
+				{ "<leader>a", group = "[A]gent chat" },
+				{ "<leader>an", group = "[N]ew chat" },
+				{ "<leader>ar", group = "[R]esume chat" },
 			},
 		},
 	},

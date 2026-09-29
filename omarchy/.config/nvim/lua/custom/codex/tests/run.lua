@@ -100,6 +100,17 @@ local function run()
 	assert(vim.bo[buffer("history")].buftype == "nofile")
 	assert(vim.bo[buffer("prompt")].buftype == "")
 	assert(not vim.bo[buffer("prompt")].swapfile)
+	assert(vim.fn.maparg("<leader>ano", "n") ~= "" and vim.fn.maparg("<leader>aro", "n") ~= "")
+	vim.api.nvim_buf_call(code_buf, function()
+		assert(vim.fn.maparg("<leader>as", "n") == "", "Chat keys must only exist inside the chat")
+	end)
+	for _, name in ipairs({ "history", "prompt" }) do
+		vim.api.nvim_buf_call(buffer(name), function()
+			for _, key in ipairs({ "<leader>as", "<leader>am", "<leader>af", "<leader>ap", "<leader>ax" }) do
+				assert(vim.fn.maparg(key, "n") ~= "", "Missing chat key " .. key)
+			end
+		end)
+	end
 	for _, name in ipairs({ "history", "prompt" }) do
 		for _, mode in ipairs({ "n", "i" }) do
 			for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(buffer(name), mode)) do

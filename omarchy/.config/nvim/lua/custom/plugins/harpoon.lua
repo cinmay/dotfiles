@@ -11,19 +11,24 @@ return {
 					if not item then
 						return
 					end
-					local codex = require("custom.codex")
-					local id = item.value:match("^codex://(.+)$")
-					if id then
-						codex.select_bookmark(id)
+					local codex, claude = require("custom.codex"), require("custom.claude")
+					local codex_id = item.value:match("^codex://(.+)$")
+					local claude_id = item.value:match("^claude://(.+)$")
+					if codex_id then
+						codex.select_bookmark(codex_id)
+					elseif claude_id then
+						claude.select_bookmark(claude_id)
 					else
 						codex.hide()
+						claude.hide()
 						defaults.select(item, list, options)
 					end
 				end,
 				display = function(item)
-					if item.value:match("^codex://") then
+					local agent = item.value:match("^codex://") and "Codex" or item.value:match("^claude://") and "Claude"
+					if agent then
 						local title = (item.context.title or "Conversation"):gsub("%c", " ")
-						return "Codex: " .. title .. " [" .. item.value .. "]"
+						return agent .. ": " .. title .. " [" .. item.value .. "]"
 					end
 					return defaults.display(item)
 				end,
@@ -32,6 +37,9 @@ return {
 					local title, value
 					if name then
 						title, value = name:match("^Codex: (.-) %[(codex://[^%]]+)%]$")
+						if not value then
+							title, value = name:match("^Claude: (.-) %[(claude://[^%]]+)%]$")
+						end
 					end
 					if value then
 						return { value = value, context = { title = title } }
@@ -46,10 +54,11 @@ return {
 			{
 				"<c-h>",
 				function()
-					local codex = require("custom.codex")
+					local codex, claude = require("custom.codex"), require("custom.claude")
 					local list = require("harpoon"):list()
-					if codex.is_buffer() then
-						local item = codex.bookmark()
+					local chat = codex.is_buffer() and codex or claude.is_buffer() and claude
+					if chat then
+						local item = chat.bookmark()
 						if item then
 							list:add(item)
 						end
@@ -57,7 +66,7 @@ return {
 						list:add()
 					end
 				end,
-				desc = "Harpoon File / Codex Conversation",
+				desc = "Harpoon File / Codex or Claude Conversation",
 			},
 			{
 				"<c-m>",
