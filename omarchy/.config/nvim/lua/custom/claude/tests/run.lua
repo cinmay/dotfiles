@@ -110,14 +110,24 @@ local function write_fixtures()
 			type = "user",
 			uuid = "r1",
 			parentUuid = "a2",
-			message = { role = "user", content = { { type = "tool_result", tool_use_id = "toolu_old", content = "clean" } } },
+			message = {
+				role = "user",
+				content = { { type = "tool_result", tool_use_id = "toolu_old", content = "clean" } },
+			},
 		},
 		{ type = "system", subtype = "away_summary", uuid = "s1", parentUuid = "r1", content = "AWAY RECAP" },
 		{ type = "system", subtype = "informational", uuid = "s2", parentUuid = "s1", content = "An old notice" },
 		{
+			type = "system",
+			subtype = "local_command",
+			uuid = "l1",
+			parentUuid = "s2",
+			content = "<local-command-stdout>LOCAL COMMAND OUTPUT</local-command-stdout>",
+		},
+		{
 			type = "user",
 			uuid = "c1",
-			parentUuid = "s2",
+			parentUuid = "l1",
 			message = { role = "user", content = "<command-name>/model</command-name>" },
 		},
 		typed("u2", "c1", "ABANDONED BRANCH"),
@@ -163,7 +173,7 @@ local function run()
 	assert(vim.bo[buffer("prompt")].buftype == "" and not vim.bo[buffer("prompt")].swapfile)
 	for _, name in ipairs({ "history", "prompt" }) do
 		vim.api.nvim_buf_call(buffer(name), function()
-			for _, key in ipairs({ "<leader>as", "<leader>am", "<leader>ax" }) do
+			for _, key in ipairs({ "<leader>as", "<leader>am", "<leader>ax", "<leader>ac", "<leader>af" }) do
 				assert(vim.fn.maparg(key, "n") ~= "", "Missing chat key " .. key)
 			end
 		end)
@@ -328,7 +338,14 @@ local function run()
 		assert(has_history(shown), "Missing from resumed history: " .. shown)
 	end
 	assert(has_history("## You\n\nRewound prompt") and has_history("Latest answer"))
-	for _, hidden in ipairs({ "AWAY RECAP", "/model", "ABANDONED", "HIDDEN", "final authoritative text" }) do
+	for _, hidden in ipairs({
+		"AWAY RECAP",
+		"/model",
+		"LOCAL COMMAND OUTPUT",
+		"ABANDONED",
+		"HIDDEN",
+		"final authoritative text",
+	}) do
 		assert(not has_history(hidden), "Should be hidden in resumed history: " .. hidden)
 	end
 	assert(has_title("Opus 5.5 · high · Auto · Ready") and has_title("ctx 50k"))
@@ -410,9 +427,104 @@ local function run()
 	assert(text("prompt") == "", "New chat took the previous chat's draft")
 	vim.cmd.buffer(code_buf)
 	assert(#vim.api.nvim_list_wins() == 1 and vim.api.nvim_get_current_buf() == code_buf)
+
+	-- Slash commands and file mentions, in a project of their own.
+	local project = vim.fn.tempname()
+	vim.fn.mkdir(project .. "/sub", "p")
+	for _, name in ipairs({ "plain.txt", "with space.txt", "sub/deep.txt" }) do
+		vim.fn.writefile({ name }, project .. "/" .. name)
+	end
+	vim.cmd.cd(project)
+	claude.new()
+	wait_title("Ready")
+	send("stream")
+	done()
+	assert(has_title("ctx 3%"))
+	local function select_entry(title, query, value)
+		wait(function()
+			return picker() and picker().prompt_title:find(title, 1, true)
+		end, title)
+		picker():set_prompt(query)
+		wait(function()
+			local entry = action_state.get_selected_entry()
+			return entry and (type(entry.value) == "table" and entry.value.name or entry.value) == value
+		end, "selected " .. value)
+	end
+	local function run_command(name)
+		claude.commands()
+		select_entry("Claude commands", name, name)
+		actions.select_default(vim.api.nvim_get_current_buf())
+	end
+	local inputs = {}
+	vim.ui.input = function(opts, callback)
+		assert(opts.prompt == "/compact <optional custom summarization instructions> ", opts.prompt)
+		callback(table.remove(inputs, 1))
+	end
+
+	-- Hidden commands are left out; aliases find their command.
+	claude.commands()
+	wait(function()
+		return picker() and picker().manager and picker().manager:num_results() == 3
+	end, "command picker without hidden commands")
+	select_entry("Claude commands", "/cost", "usage")
+	actions.close(vim.api.nvim_get_current_buf())
+
+	-- Without a hint Enter runs it; the draft stays and the output keeps the context display.
+	prompt("Draft beside commands")
+	run_command("context")
+	done()
+	assert(has_history("## You\n\n/context") and has_history("Fake context table"))
+	assert(text("prompt") == "Draft beside commands", "Running a command lost the draft")
+	assert(has_title("ctx 3%"), "Command output reset the context display")
+
+	-- A hint asks for the argument: an answer is appended, an empty one runs it bare, Esc cancels.
+	inputs = { "keep the tests" }
+	run_command("compact")
+	done()
+	assert(has_history("## You\n\n/compact keep the tests"))
+	inputs = { "" }
+	run_command("compact")
+	done()
+	assert(has_history("## You\n\n/compact\n"))
+	inputs = {}
+	run_command("compact")
+	vim.wait(100)
+	local _, compacts = text("history"):gsub("## You\n\n/compact", "")
+	assert(compacts == 2 and has_title("Done"), "Cancelling the argument still ran the command")
+	assert(text("prompt") == "Draft beside commands")
+
+	-- Commands wait for the turn; file mentions do not, and go in at the cursor.
+	send("wait")
+	wait_title("Running")
+	claude.commands()
+	assert(notifications[#notifications] == "Claude: Finish or interrupt the current turn first")
+	assert(not picker(), "Command picker opened during a turn")
+	prompt("Look at please")
+	vim.api.nvim_set_current_win(window("prompt"))
+	vim.api.nvim_win_set_cursor(0, { 1, 6 })
+	claude.files()
+	select_entry("Claude files", "plain", "plain.txt")
+	actions.toggle_selection(vim.api.nvim_get_current_buf())
+	select_entry("Claude files", "with space", "with space.txt")
+	actions.toggle_selection(vim.api.nvim_get_current_buf())
+	actions.select_default(vim.api.nvim_get_current_buf())
+	local expected = 'Look at @plain.txt @"with space.txt"'
+	assert(text("prompt") == expected .. " please", text("prompt"))
+	assert(vim.api.nvim_get_current_win() == window("prompt"))
+	assert(vim.deep_equal(vim.api.nvim_win_get_cursor(0), { 1, #expected - 1 }), "Cursor not after the mentions")
+	-- From the history, mentions are added to the end of the draft.
+	vim.api.nvim_set_current_win(window("history"))
+	claude.files()
+	select_entry("Claude files", "sub/", "sub/")
+	actions.select_default(vim.api.nvim_get_current_buf())
+	assert(text("prompt") == expected .. " please @sub/ ", text("prompt"))
+	assert(vim.api.nvim_get_current_win() == window("prompt"))
+	assert(has_title("Running"), "Mentioning files disturbed the turn")
+	claude.interrupt()
+	wait_title("Interrupted")
 	print(
 		"PASS: layout/:q, streaming, tools, notices, settings menu, questions, plans, permissions, hidden requests,"
-			.. " interrupt, errors, reconnect, resume, drafts, Telescope, Harpoon"
+			.. " interrupt, errors, reconnect, resume, drafts, Telescope, Harpoon, commands, file mentions"
 	)
 end
 

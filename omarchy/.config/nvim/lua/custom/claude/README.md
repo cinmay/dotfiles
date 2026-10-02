@@ -13,7 +13,8 @@ is deliberately the same, the protocol handling is Claude's own.
 
 - Claude Code installed and signed in (`claude` works in a terminal).
 - Neovim with `vim.system` (0.10+).
-- Tested with Claude Code **2.1.283** and Neovim **0.12.5**.
+- Tested with Claude Code **2.1.283** and Neovim **0.12.5**; commands and `@`
+  mentions with **2.1.287**.
 
 Each chat runs one `claude` child process in Neovim's current directory,
 talking JSON lines over stdin/stdout. It loads your normal Claude Code setup:
@@ -30,6 +31,8 @@ settings, `CLAUDE.md`, skills, plugins, and connectors.
 | `<leader>as` | `:ClaudeSend` | Send the prompt |
 | `<leader>am` | `:ClaudeModel` | Change model, effort, or permission mode |
 | `<leader>ax` | `:ClaudeInterrupt` | Interrupt the running turn |
+| `<leader>ac` | `:ClaudeCommands` | Pick a slash command and run it |
+| `<leader>af` | `:ClaudeFiles` | Mention files or directories in the prompt |
 
 `<leader>ana` and `<leader>ara` work everywhere (`a` for Anthropic; Codex uses
 `o`). The other keys exist only in the chat buffers, so they cannot fire from
@@ -62,6 +65,27 @@ apply to this chat only; Claude Code's settings files are not edited:
 - **Effort**, from the levels the current model supports.
 - **Permission mode**: Manual, Accept edits, Plan, Auto, or Don't ask. Bypass is
   not offered because Claude Code only allows it when launched with a flag.
+
+## Slash commands and file mentions
+
+`<leader>ac` lists the slash commands Claude Code reports for the session,
+including your skills and custom commands; aliases are searchable (`/cost` finds
+`/usage`). Enter runs a command at once. If it takes an argument, its hint is
+shown in an input: Enter runs it with what you typed, or bare when empty, and Esc
+cancels. The command and its output appear in the history like a prompt and a
+reply; your draft is not touched. Commands cannot run during a turn. To write a
+longer argument, type the command in the prompt and send it with `<leader>as`.
+
+Left out of the picker: `/model` and `/effort` (use `<leader>am`, so the winbar
+stays right), `/clear` (use `<leader>ana`), terminal-only commands (`/color`,
+`/focus`, `/heapdump`), and removed or internal ones.
+
+`<leader>af` picks files and directories (Tab selects several) and inserts them
+as `@path` mentions, relative to the chat's directory and quoted when they
+contain spaces. Claude Code attaches a mentioned file's contents to the message,
+and a directory's file listing, so Claude does not need to read them first.
+From the prompt, mentions go in after the cursor; from the history, at the end
+of the draft. It works during a turn, since it only edits the draft.
 
 ## Permissions, questions, and plans
 
@@ -143,7 +167,9 @@ NVIM_LOG_FILE=/tmp/claude-nvim-test.log nvim --headless -u NONE -i NONE \
 The fake CLI (`tests/fake_claude.py`) never runs a model or touches your Claude
 sessions. Its messages follow recordings of the real protocol. It exercises
 fragmented Unicode streaming, tool lines, subagent filtering, notices and model
-changes, the settings menu, context and usage-limit display, questions (single
+changes, the settings menu, slash commands (hidden commands, aliases, arguments,
+cancelling, refusal during a turn), file mentions (cursor position, quoting,
+multi-select, during a turn), context and usage-limit display, questions (single
 and multi-select, stale keys), plans, allowed and denied permissions, requests
 arriving while hidden, interrupting, turn errors, crashes with reconnect, native
 splits, and `:q`. Resume runs against a temporary session store with rewound

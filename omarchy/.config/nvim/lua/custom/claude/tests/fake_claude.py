@@ -20,6 +20,15 @@ MODELS = [
     {"value": "claude-opus-4-8", "resolvedModel": "claude-opus-4-8", "displayName": "Opus 4.8",
      "supportedEffortLevels": ["low", "high"]},
 ]
+COMMANDS = [
+    {"name": "context", "description": "Show current context usage", "argumentHint": "", "builtin": True},
+    {"name": "compact", "description": "Free up context by summarizing the conversation so far",
+     "argumentHint": "<optional custom summarization instructions>", "builtin": True},
+    {"name": "usage", "description": "Show session cost", "argumentHint": "", "aliases": ["cost", "stats"],
+     "builtin": True},
+    {"name": "model", "description": "Set the AI model for Claude Code", "argumentHint": "<model>", "builtin": True},
+    {"name": "__remote-workflow", "description": "Internal", "argumentHint": "", "builtin": True},
+]
 waiting = {}  # request_id -> scenario, for requests sent to Neovim
 
 
@@ -61,6 +70,15 @@ def tool_result(tool_id, is_error=False):
     send({"type": "user", "parent_tool_use_id": None, "session_id": session,
           "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": tool_id,
                                                    "content": "result", "is_error": is_error}]}})
+
+
+def command_output(value):
+    # Slash commands answer from a synthetic model with zero usage, recorded with 2.1.287.
+    usage = {"input_tokens": 0, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0, "output_tokens": 0}
+    send({"type": "assistant", "parent_tool_use_id": None, "session_id": session,
+          "message": {"id": "msg-command", "role": "assistant", "model": "<synthetic>", "usage": usage,
+                      "content": [{"type": "text", "text": value}]}})
+    result(value=value)
 
 
 def result(subtype="success", is_error=False, errors=None, value=""):
@@ -111,7 +129,7 @@ for line in sys.stdin:
         reply = {"type": "control_response", "response": {"subtype": "success", "request_id": message["request_id"]}}
         request = message["request"]
         if subtype == "initialize":
-            reply["response"]["response"] = {"current_permission_mode": mode, "models": MODELS}
+            reply["response"]["response"] = {"current_permission_mode": mode, "models": MODELS, "commands": COMMANDS}
             send(reply)
         elif subtype == "set_model":
             model = next(m["resolvedModel"] for m in MODELS if m["value"] == request["model"])
@@ -165,6 +183,10 @@ for line in sys.stdin:
         tool("tool-" + scenario, "Bash", {"command": "echo hi"})
         ask(scenario, "Bash", {"command": "echo hi"}, description="Print a greeting",
             blocked_path=cwd + "/outside.txt")
+    elif scenario == "/context":
+        command_output("## Context Usage\n\nFake context table")
+    elif scenario in ("/compact", "/compact keep the tests"):
+        command_output("Compacted: " + scenario)
     elif scenario == "error":
         result("success", True, value="API Error: overloaded")
     elif scenario != "wait":

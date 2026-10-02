@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# explorer.exe falls back to opening File Explorer for many URLs (e.g. with
+# query strings). url.dll's protocol handler hands them to the Windows default browser.
+cd /mnt/c
+exec /mnt/c/Windows/System32/rundll32.exe url.dll,FileProtocolHandler "$@"

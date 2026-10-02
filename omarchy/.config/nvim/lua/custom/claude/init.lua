@@ -17,6 +17,19 @@ local mode_names = {
 }
 -- Bypass is left out of the menu: Claude Code only allows it when launched with a flag.
 local selectable_modes = { "default", "acceptEdits", "plan", "auto", "dontAsk" }
+-- Left out of the command picker: they would change state behind the winbar, or only
+-- mean something in the terminal UI. Names starting with "__" are internal too.
+local hidden_commands = {
+	model = true, -- <leader>am
+	effort = true, -- <leader>am
+	clear = true, -- <leader>ana
+	color = true,
+	focus = true,
+	heapdump = true,
+	agents = true, -- Removed from Claude Code.
+	["extra-usage"] = true, -- Renamed to /usage-credits.
+	["workflow-launch-exec"] = true, -- Server-launched sessions only.
+}
 
 local state = { entries = {}, tools = {}, requests = {}, status = "Ready", busy = false }
 local sessions = require("custom.claude.sessions")
@@ -278,8 +291,9 @@ local function on_message(message)
 			state.mode, state.cwd = message.permissionMode, message.cwd
 		elseif message.subtype == "status" then
 			state.mode = message.permissionMode or state.mode
-		elseif type(message.content) == "string" and message.subtype ~= "away_summary" then
+		elseif type(message.content) == "string" and message.subtype ~= "away_summary" and message.subtype ~= "local_command" then
 			-- Notices such as a safety fallback matter; the "while you were away" recap does not.
+			-- Stored slash-command output is hidden on resume, like the command itself.
 			add({ kind = "notice", text = message.content })
 		end
 	elseif message.type == "stream_event" then
@@ -291,7 +305,8 @@ local function on_message(message)
 		end
 	elseif message.type == "assistant" then
 		local usage = message.message.usage
-		if usage then
+		-- Slash-command output arrives from a "<synthetic>" model with zero usage.
+		if usage and message.message.model ~= "<synthetic>" then
 			state.context_tokens = (usage.input_tokens or 0)
 				+ (usage.cache_read_input_tokens or 0)
 				+ (usage.cache_creation_input_tokens or 0)
@@ -404,7 +419,7 @@ local function start_session(resume_id)
 			fail(init_err)
 			return
 		end
-		state.models, state.mode = response.models, response.current_permission_mode
+		state.models, state.mode, state.commands = response.models, response.current_permission_mode, response.commands
 		state.ready, state.busy, state.status = true, false, "Ready"
 		render()
 	end)
@@ -493,6 +508,8 @@ local chat_keymaps = {
 	{ "<leader>as", "send", "send prompt" },
 	{ "<leader>am", "models", "model, effort, and permission mode" },
 	{ "<leader>ax", "interrupt", "interrupt turn" },
+	{ "<leader>ac", "commands", "slash commands" },
+	{ "<leader>af", "files", "mention files / directories" },
 }
 
 local function show()
@@ -783,6 +800,28 @@ function M.models()
 	end)
 end
 
+-- Starts a turn; prompts and slash commands both arrive as user messages.
+local function send_text(text)
+	show()
+	local sent = process:send({
+		type = "user",
+		message = { role = "user", content = text },
+		parent_tool_use_id = vim.NIL,
+		session_id = state.session_id or "",
+	})
+	if not sent then
+		fail("Could not send the prompt to Claude")
+		return false
+	end
+	add({ kind = "user", text = text })
+	state.busy, state.status, state.error = true, "Running", nil
+	state.started = vim.uv.hrtime()
+	timer = vim.uv.new_timer()
+	timer:start(0, 1000, vim.schedule_wrap(title))
+	render()
+	return true
+end
+
 function M.send()
 	if state.busy then
 		notify("A turn or session start is already in progress")
@@ -798,24 +837,171 @@ function M.send()
 		M.open()
 		return
 	end
-	show()
-	local sent = process:send({
-		type = "user",
-		message = { role = "user", content = text },
-		parent_tool_use_id = vim.NIL,
-		session_id = state.session_id or "",
-	})
-	if not sent then
-		fail("Could not send the prompt to Claude")
+	if send_text(text) then
+		vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, { "" })
+	end
+end
+
+local function can_run_command()
+	if state.started then
+		notify("Finish or interrupt the current turn first")
+		return false
+	end
+	if not state.ready then
+		notify("Wait until the chat is ready")
+		M.open()
+		return false
+	end
+	return true
+end
+
+-- A command without an argument hint runs at once; otherwise its argument is asked for.
+-- Sending bypasses the prompt buffer, so the draft is kept.
+local function run_command(command)
+	local text = "/" .. command.name
+	local hint = command.argumentHint or ""
+	if hint == "" then
+		send_text(text)
 		return
 	end
-	add({ kind = "user", text = text })
-	vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, { "" })
-	state.busy, state.status, state.error = true, "Running", nil
-	state.started = vim.uv.hrtime()
-	timer = vim.uv.new_timer()
-	timer:start(0, 1000, vim.schedule_wrap(title))
-	render()
+	vim.ui.input({ prompt = text .. " " .. hint .. " " }, function(argument)
+		if argument and can_run_command() then
+			send_text(argument:match("%S") and text .. " " .. argument or text)
+		end
+	end)
+end
+
+function M.commands()
+	if not can_run_command() then
+		return
+	end
+	local found = {}
+	for _, command in ipairs(state.commands or {}) do
+		if not hidden_commands[command.name] and not command.name:match("^__") then
+			table.insert(found, command)
+		end
+	end
+	table.sort(found, function(a, b)
+		return a.name < b.name
+	end)
+	local actions = require("telescope.actions")
+	require("telescope.pickers")
+		.new({}, {
+			prompt_title = "Claude commands",
+			finder = require("telescope.finders").new_table({
+				results = found,
+				entry_maker = function(command)
+					local hint = command.argumentHint or ""
+					local label = "/" .. command.name .. (hint ~= "" and " " .. hint or "")
+					if command.description and command.description ~= "" then
+						label = label .. "  — " .. command.description
+					end
+					label = label:gsub("%c", " ")
+					local aliases = #(command.aliases or {}) > 0 and " /" .. table.concat(command.aliases, " /") or ""
+					return { value = command, display = label, ordinal = label .. aliases }
+				end,
+			}),
+			sorter = require("telescope.config").values.generic_sorter({}),
+			attach_mappings = function(buf)
+				actions.select_default:replace(function()
+					local entry = require("telescope.actions.state").get_selected_entry()
+					actions.close(buf)
+					if entry and can_run_command() then
+						run_command(entry.value)
+					end
+				end)
+				return true
+			end,
+		})
+		:find()
+end
+
+-- Claude Code attaches the contents of each @path mention (a directory gives its listing).
+-- Quoting keeps a path with spaces in one mention.
+local function mention(path)
+	if path:match("^[%w._/-]+$") then
+		return "@" .. path
+	end
+	return '@"' .. path .. '"'
+end
+
+-- Mentions go in at the cursor in the prompt, or at the end of the draft from elsewhere.
+-- Editing the draft does not touch a running turn, so this works during one.
+function M.files()
+	if not valid(prompt_win) then
+		M.open()
+	end
+	local at
+	if vim.api.nvim_get_current_win() == prompt_win and vim.api.nvim_get_current_buf() == prompt_buf then
+		local row, col = unpack(vim.api.nvim_win_get_cursor(prompt_win))
+		local line = vim.api.nvim_buf_get_lines(prompt_buf, row - 1, row, false)[1]
+		-- After the character under the cursor, like `a`.
+		at = { row - 1, col + #vim.fn.strcharpart(line:sub(col + 1), 0, 1) }
+	end
+	local cwd = state.cwd
+	vim.system({ "rg", "--files", "--hidden", "-g", "!.git", "-0" }, { cwd = cwd }, function(result)
+		vim.schedule(function()
+			if result.code > 1 then
+				notify(result.stderr, vim.log.levels.ERROR)
+				return
+			end
+			local paths, seen = {}, {}
+			for path in result.stdout:gmatch("[^%z]+") do
+				table.insert(paths, path)
+				local directory = vim.fs.dirname(path)
+				while directory and directory ~= "." and not seen[directory] do
+					table.insert(paths, directory .. "/")
+					seen[directory] = true
+					directory = vim.fs.dirname(directory)
+				end
+			end
+			table.sort(paths)
+			local actions = require("telescope.actions")
+			local action_state = require("telescope.actions.state")
+			require("telescope.pickers")
+				.new({}, {
+					prompt_title = "Claude files / directories · Tab select · Enter mention",
+					finder = require("telescope.finders").new_table({ results = paths }),
+					sorter = require("telescope.config").values.generic_sorter({}),
+					attach_mappings = function(buf)
+						actions.select_default:replace(function()
+							local selections = action_state.get_current_picker(buf):get_multi_selection()
+							if #selections == 0 then
+								selections = { action_state.get_selected_entry() }
+							end
+							actions.close(buf)
+							if state.cwd ~= cwd or not vim.api.nvim_buf_is_valid(prompt_buf) then
+								notify("The chat changed; select files again")
+								return
+							end
+							local mentions = {}
+							for _, entry in ipairs(selections) do
+								table.insert(mentions, mention(entry.value))
+							end
+							if not at then
+								local last = vim.api.nvim_buf_line_count(prompt_buf) - 1
+								at = { last, #vim.api.nvim_buf_get_lines(prompt_buf, last, last + 1, false)[1] }
+							end
+							local line = vim.api.nvim_buf_get_lines(prompt_buf, at[1], at[1] + 1, false)[1] or ""
+							local text = table.concat(mentions, " ")
+							if line:sub(at[2], at[2]):match("%S") then
+								text = " " .. text
+							end
+							if not line:sub(at[2] + 1, at[2] + 1):match("%s") then
+								text = text .. " "
+							end
+							vim.api.nvim_buf_set_text(prompt_buf, at[1], at[2], at[1], at[2], { text })
+							if valid(prompt_win) and vim.api.nvim_win_get_buf(prompt_win) == prompt_buf then
+								vim.api.nvim_set_current_win(prompt_win)
+								vim.api.nvim_win_set_cursor(prompt_win, { at[1] + 1, at[2] + #text - 1 })
+							end
+						end)
+						return true
+					end,
+				})
+				:find()
+		end)
+	end)
 end
 
 function M.interrupt()
@@ -837,6 +1023,8 @@ function M.setup(opts)
 	vim.api.nvim_create_user_command("ClaudeSend", M.send, { desc = "Claude: send prompt" })
 	vim.api.nvim_create_user_command("ClaudeInterrupt", M.interrupt, { desc = "Claude: interrupt turn" })
 	vim.api.nvim_create_user_command("ClaudeModel", M.models, { desc = "Claude: model, effort, and permission mode" })
+	vim.api.nvim_create_user_command("ClaudeCommands", M.commands, { desc = "Claude: slash commands" })
+	vim.api.nvim_create_user_command("ClaudeFiles", M.files, { desc = "Claude: mention files / directories" })
 	vim.api.nvim_create_user_command("ClaudeSessions", function(args)
 		M.sessions(args.bang)
 	end, { bang = true, desc = "Claude: resume a session" })

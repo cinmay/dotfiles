@@ -116,4 +116,4 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 . "$HOME/.local/bin/env"
-export BROWSER=/mnt/c/Windows/explorer.exe
+export BROWSER="$HOME/.local/bin/windows-browser"
