@@ -76,6 +76,9 @@ local function title()
 	if state.five_hour then
 		table.insert(parts, "5h " .. state.five_hour .. "%")
 	end
+	if state.remote_url then
+		table.insert(parts, state.bridge == "connected" and "Remote" or "Remote: " .. (state.bridge or "starting"))
+	end
 	vim.wo[history_win].winbar = (" " .. table.concat(parts, " · ") .. " "):gsub("%%", "%%%%")
 end
 
@@ -118,7 +121,7 @@ local function render()
 	end
 	for _, entry in ipairs(state.entries) do
 		if entry.kind == "user" then
-			add_text("\n## You\n\n" .. entry.text)
+			add_text((entry.remote and "\n## You (remote)\n\n" or "\n## You\n\n") .. entry.text)
 		elseif entry.kind == "assistant" then
 			add_text("\n## Claude\n\n" .. entry.text)
 		elseif entry.kind == "plan" then
@@ -232,6 +235,13 @@ local function clear_requests()
 	show_request()
 end
 
+local function prompt_text()
+	if not prompt_buf or not vim.api.nvim_buf_is_valid(prompt_buf) then
+		return ""
+	end
+	return table.concat(vim.api.nvim_buf_get_lines(prompt_buf, 0, -1, false), "\n")
+end
+
 local function finish(status, err)
 	if state.started then
 		state.elapsed = math.floor((vim.uv.hrtime() - state.started) / 1e9)
@@ -244,7 +254,11 @@ local function finish(status, err)
 end
 
 local function fail(err)
-	state.ready = false
+	-- A prompt Claude never acknowledged goes back to the prompt buffer instead of being lost.
+	if state.pending_prompt and prompt_text() == "" then
+		vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, vim.split(state.pending_prompt, "\n", { plain = true }))
+	end
+	state.ready, state.pending_prompt = false, nil
 	finish("Error", err)
 	notify(err, vim.log.levels.ERROR)
 end
@@ -268,6 +282,26 @@ local function on_result(message)
 	end
 end
 
+local function start_turn()
+	state.busy, state.status, state.error = true, "Running", nil
+	state.started = vim.uv.hrtime()
+	timer = vim.uv.new_timer()
+	timer:start(0, 1000, vim.schedule_wrap(title))
+end
+
+local function replayed_text(content)
+	if type(content) == "string" then
+		return content
+	end
+	local parts = {}
+	for _, block in ipairs(content or {}) do
+		if block.type == "text" then
+			table.insert(parts, block.text)
+		end
+	end
+	return table.concat(parts, "\n")
+end
+
 local function on_message(message)
 	if message.parent_tool_use_id then
 		return -- Subagent traffic; the Agent tool line summarises it.
@@ -278,6 +312,8 @@ local function on_message(message)
 			state.mode, state.cwd = message.permissionMode, message.cwd
 		elseif message.subtype == "status" then
 			state.mode = message.permissionMode or state.mode
+		elseif message.subtype == "bridge_state" then
+			state.bridge = message.state
 		elseif type(message.content) == "string" and message.subtype ~= "away_summary" then
 			-- Notices such as a safety fallback matter; the "while you were away" recap does not.
 			add({ kind = "notice", text = message.content })
@@ -308,6 +344,26 @@ local function on_message(message)
 				add({ kind = "plan", text = block.input.plan or "" })
 			elseif block.type == "tool_use" then
 				state.tools[block.id] = add({ kind = "tool", text = describe_tool(block), status = "running" })
+			end
+		end
+	elseif message.type == "user" and message.isReplay then
+		-- Claude echoes every prompt it starts, including ones sent through Remote Control.
+		local text = replayed_text(message.message.content)
+		local own = text == state.pending_prompt
+		if own then
+			state.pending_prompt = nil
+		elseif not state.started then
+			start_turn()
+		end
+		add({ kind = "user", text = text, remote = not own })
+	elseif message.type == "control_cancel_request" then
+		-- Answered elsewhere, for example on the phone through Remote Control.
+		for i, request in ipairs(state.requests) do
+			if request.request_id == message.request_id then
+				request.resolved = true
+				table.remove(state.requests, i)
+				show_request()
+				break
 			end
 		end
 	elseif message.type == "user" and type(message.message.content) == "table" then
@@ -361,6 +417,7 @@ local function start_session(resume_id)
 		state.cwd = vim.fn.getcwd()
 	end
 	state.error, state.live, state.ready, state.elapsed = nil, nil, false, 0
+	state.pending_prompt, state.remote_url, state.bridge = nil, nil, nil
 	state.busy, state.status = true, "Starting"
 	local args = {
 		"-p",
@@ -372,6 +429,7 @@ local function start_session(resume_id)
 		"--include-partial-messages",
 		"--permission-prompt-tool",
 		"stdio",
+		"--replay-user-messages",
 	}
 	if resume_id then
 		vim.list_extend(args, { "--resume", resume_id })
@@ -408,13 +466,6 @@ local function start_session(resume_id)
 		state.ready, state.busy, state.status = true, false, "Ready"
 		render()
 	end)
-end
-
-local function prompt_text()
-	if not prompt_buf or not vim.api.nvim_buf_is_valid(prompt_buf) then
-		return ""
-	end
-	return table.concat(vim.api.nvim_buf_get_lines(prompt_buf, 0, -1, false), "\n")
 end
 
 local function remember_views()
@@ -770,6 +821,19 @@ function M.models()
 				end)
 			end,
 		},
+		{
+			label = "Remote Control: " .. (state.remote_url and "on" or "off"),
+			pick = function()
+				local enable = not state.remote_url
+				change("remote_control", { enabled = enable }, function(response)
+					state.remote_url = enable and response.session_url or nil
+					local text = enable and "Remote Control on: " .. tostring(response.session_url) or "Remote Control off"
+					add({ kind = "notice", text = text })
+					notify(text)
+					schedule_render()
+				end)
+			end,
+		},
 	}
 	vim.ui.select(settings, {
 		prompt = "Claude settings",
@@ -809,12 +873,9 @@ function M.send()
 		fail("Could not send the prompt to Claude")
 		return
 	end
-	add({ kind = "user", text = text })
+	state.pending_prompt = text
 	vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, { "" })
-	state.busy, state.status, state.error = true, "Running", nil
-	state.started = vim.uv.hrtime()
-	timer = vim.uv.new_timer()
-	timer:start(0, 1000, vim.schedule_wrap(title))
+	start_turn()
 	render()
 end
 

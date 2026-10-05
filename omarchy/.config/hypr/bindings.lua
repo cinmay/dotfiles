@@ -13,6 +13,10 @@ o.window("^com\\.mitchellh\\.ghostty$", {
   },
 })
 
+-- The music workspace shows one player at a time; SUPER + M switches between them.
+hl.workspace_rule({ workspace = "11", layout = "monocle" })
+o.window("^(com\\.cinmay\\.rmpc|chrome-music\\.youtube\\.com__-Default)$", { workspace = "11 silent" })
+
 local function center_active_window()
   local window = hl.get_active_window()
   if not window or not window.monitor then

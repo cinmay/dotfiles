@@ -62,6 +62,23 @@ apply to this chat only; Claude Code's settings files are not edited:
 - **Effort**, from the levels the current model supports.
 - **Permission mode**: Manual, Accept edits, Plan, Auto, or Don't ask. Bypass is
   not offered because Claude Code only allows it when launched with a flag.
+- **Remote Control**: on or off. See below.
+
+## Remote Control
+
+Remote Control lets you continue the chat from the Claude app on your phone or
+from claude.ai. It is off until you turn it on in the `<leader>am` menu, and it
+stays on until you turn it off or the chat's process ends (a new chat, a resume,
+or quitting Neovim). Turning it on adds the session link to the history as a
+notice, and the winbar shows `Remote` while the phone side is connected.
+
+Prompts sent from the phone appear in the history as `## You (remote)`, and the
+winbar shows the remote turn running, so the history reads the same as a local
+conversation. Claude Code echoes every prompt it starts (`--replay-user-messages`);
+that echo is what the history shows, for your own prompts too. A prompt that
+Claude never acknowledged, because the process died, goes back into the prompt
+buffer. Questions and permission requests show in both places; answering on the
+phone closes the request in Neovim.
 
 ## Permissions, questions, and plans
 
@@ -143,7 +160,8 @@ NVIM_LOG_FILE=/tmp/claude-nvim-test.log nvim --headless -u NONE -i NONE \
 The fake CLI (`tests/fake_claude.py`) never runs a model or touches your Claude
 sessions. Its messages follow recordings of the real protocol. It exercises
 fragmented Unicode streaming, tool lines, subagent filtering, notices and model
-changes, the settings menu, context and usage-limit display, questions (single
+changes, the settings menu, Remote Control (remote prompts and requests answered
+on the phone), context and usage-limit display, questions (single
 and multi-select, stale keys), plans, allowed and denied permissions, requests
 arriving while hidden, interrupting, turn errors, crashes with reconnect, native
 splits, and `:q`. Resume runs against a temporary session store with rewound

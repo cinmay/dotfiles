@@ -1,204 +1,68 @@
 #!/usr/bin/env bash
+# Jump to the music workspace and show the last used player.
+# Pressed again on the music workspace, switch between rmpc and YouTube Music.
+# Workspace 11 uses the monocle layout (hypr/bindings.lua), so one player is visible at a time.
+
 set -euo pipefail
 
 music_workspace=11
 rmpc_class="com.cinmay.rmpc"
-youtube_class="com.cinmay.youtube-music"
+# Chrome ignores --class on Wayland and derives the app id from the web app URL.
+youtube_class="chrome-music.youtube.com__-Default"
 youtube_url="https://music.youtube.com"
 script_dir="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd)"
 hypr_dispatch="$script_dir/hypr-lua-dispatch"
 rmpc_launcher="$script_dir/rmpc-music.sh"
 
-clients() {
-  hyprctl -j clients
-}
-
-find_rmpc() {
-  clients | jq -r --arg class "$rmpc_class" '
-    .[]
-    | select(
-        (.class // "") == $class
-        or (.initialClass // "") == $class
-        or ((.title // "") | test("^rmpc-music$"))
-      )
-    | "\(.address) \(.workspace.id)"
-  ' | head -n1
-}
-
-find_youtube() {
-  clients | jq -r --arg class "$youtube_class" '
-    .[]
-    | select(
-        (.class // "") == $class
-        or (.initialClass // "") == $class
-        or ((.title // "") | test("YouTube Music"))
-      )
-    | "\(.address) \(.workspace.id)"
-  ' | head -n1
-}
-
-address_from() {
-  printf "%s" "${1%% *}"
-}
-
-focus_window() {
-  "$hypr_dispatch" focus-window "$1" >/dev/null
-}
-
-workspace_music() {
-  "$hypr_dispatch" workspace "$music_workspace" >/dev/null
-}
-
-is_grouped() {
-  local address="$1"
-
-  clients | jq -e --arg address "$address" '
-    .[]
-    | select(.address == $address)
-    | ((.grouped // []) | length > 0)
-  ' >/dev/null
-}
-
-ensure_group() {
-  local address="$1"
-
-  focus_window "$address"
-  if ! is_grouped "$address"; then
-    "$hypr_dispatch" group-toggle >/dev/null || true
-  fi
-  "$hypr_dispatch" group-lock-active unlock >/dev/null || true
-}
-
-lock_group() {
-  local address="$1"
-
-  focus_window "$address"
-  if is_grouped "$address"; then
-    "$hypr_dispatch" group-lock-active lock >/dev/null || true
-  fi
-}
-
-move_to_music_workspace() {
-  local address="$1"
-
-  "$hypr_dispatch" move-to-workspace-silent "$music_workspace" "$address" >/dev/null || true
-}
-
-move_into_group() {
-  local moving_address="$1"
-  local group_address="$2"
-
-  move_to_music_workspace "$moving_address"
-  focus_window "$group_address"
-  ensure_group "$group_address"
-
-  "$hypr_dispatch" group-add "$group_address" "$moving_address" >/dev/null || true
-  if is_grouped "$moving_address"; then
-    lock_group "$moving_address"
-    return 0
-  fi
-
-  lock_group "$group_address"
-  return 1
+most_recent_window() {
+  hyprctl -j clients | jq -r --args '
+    [.[] | select(.class as $class | $ARGS.positional | index($class))]
+    | sort_by(.focusHistoryID)
+    | (.[0].address // empty)
+  ' "$@"
 }
 
 launch_rmpc() {
   local launcher
 
   printf -v launcher "%q" "$rmpc_launcher"
-  "$hypr_dispatch" exec "[workspace $music_workspace] bash -lc 'exec uwsm-app -- ghostty --class=$rmpc_class --title=rmpc-music -e $launcher'" >/dev/null
+  "$hypr_dispatch" exec "bash -lc 'exec uwsm-app -- ghostty --class=$rmpc_class --title=rmpc-music -e $launcher'" >/dev/null
 }
 
 launch_youtube() {
-  "$hypr_dispatch" exec "[workspace $music_workspace] omarchy-launch-webapp $youtube_url --class=$youtube_class" >/dev/null
+  "$hypr_dispatch" exec "omarchy-launch-webapp $youtube_url" >/dev/null
 }
 
-wait_for_rmpc() {
-  local found
+show_player() {
+  local class="$1"
+  local address
 
-  for _ in {1..60}; do
-    found="$(find_rmpc)"
-    if [[ -n "$found" ]]; then
-      printf "%s" "$found"
-      return 0
-    fi
-    sleep 0.1
-  done
-
-  return 1
+  address="$(most_recent_window "$class")"
+  if [[ -n "$address" ]]; then
+    "$hypr_dispatch" focus-window "$address" >/dev/null
+  elif [[ "$class" == "$rmpc_class" ]]; then
+    launch_rmpc
+  else
+    launch_youtube
+  fi
 }
 
-wait_for_youtube() {
-  local found
+active_workspace="$(hyprctl -j activeworkspace | jq -r '.id')"
+active_class="$(hyprctl -j activewindow | jq -r '.class // empty')"
 
-  for _ in {1..80}; do
-    found="$(find_youtube)"
-    if [[ -n "$found" ]]; then
-      printf "%s" "$found"
-      return 0
-    fi
-    sleep 0.1
-  done
-
-  return 1
-}
-
-rmpc_window="$(find_rmpc)"
-youtube_window="$(find_youtube)"
-
-if [[ -n "$rmpc_window" && -n "$youtube_window" ]]; then
-  rmpc_address="$(address_from "$rmpc_window")"
-  youtube_address="$(address_from "$youtube_window")"
-  workspace_music
-  if ! is_grouped "$rmpc_address" || ! is_grouped "$youtube_address"; then
-    ensure_group "$rmpc_address"
-    move_into_group "$youtube_address" "$rmpc_address" || true
-    focus_window "$rmpc_address"
+if [[ "$active_workspace" != "$music_workspace" ]]; then
+  "$hypr_dispatch" workspace "$music_workspace" >/dev/null
+  last_player="$(most_recent_window "$rmpc_class" "$youtube_class")"
+  if [[ -n "$last_player" ]]; then
+    "$hypr_dispatch" focus-window "$last_player" >/dev/null
+  else
+    launch_rmpc
   fi
   exit 0
 fi
 
-if [[ -z "$rmpc_window" && -z "$youtube_window" ]]; then
-  workspace_music
-  launch_rmpc
-  rmpc_window="$(wait_for_rmpc || true)"
-  if [[ -n "$rmpc_window" ]]; then
-    rmpc_address="$(address_from "$rmpc_window")"
-    ensure_group "$rmpc_address"
-  fi
-
-  launch_youtube
-  youtube_window="$(wait_for_youtube || true)"
-  if [[ -n "$rmpc_window" && -n "$youtube_window" ]]; then
-    youtube_address="$(address_from "$youtube_window")"
-    move_into_group "$youtube_address" "$rmpc_address" || true
-  fi
-
-  [[ -n "$rmpc_window" ]] && focus_window "$rmpc_address"
-  exit 0
+if [[ "$active_class" == "$rmpc_class" ]]; then
+  show_player "$youtube_class"
+else
+  show_player "$rmpc_class"
 fi
-
-if [[ -n "$rmpc_window" ]]; then
-  rmpc_address="$(address_from "$rmpc_window")"
-  workspace_music
-  ensure_group "$rmpc_address"
-  launch_youtube
-  youtube_window="$(wait_for_youtube || true)"
-  if [[ -n "$youtube_window" ]]; then
-    youtube_address="$(address_from "$youtube_window")"
-    move_into_group "$youtube_address" "$rmpc_address" || true
-  fi
-  focus_window "$rmpc_address"
-  exit 0
-fi
-
-youtube_address="$(address_from "$youtube_window")"
-workspace_music
-ensure_group "$youtube_address"
-launch_rmpc
-rmpc_window="$(wait_for_rmpc || true)"
-if [[ -n "$rmpc_window" ]]; then
-  rmpc_address="$(address_from "$rmpc_window")"
-  move_into_group "$rmpc_address" "$youtube_address" || true
-fi
-focus_window "$youtube_address"

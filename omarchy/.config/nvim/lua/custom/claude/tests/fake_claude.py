@@ -5,9 +5,11 @@ Message shapes follow recordings of Claude Code 2.1.283."""
 import json
 import os
 import sys
+import time
 
 args = sys.argv[1:]
-for flag in ("--input-format", "--output-format", "--include-partial-messages", "--permission-prompt-tool"):
+for flag in ("--input-format", "--output-format", "--include-partial-messages", "--permission-prompt-tool",
+             "--replay-user-messages"):
     assert flag in args, args
 session = args[args.index("--resume") + 1] if "--resume" in args else "fake-session"
 model = "claude-opus-5-5"
@@ -119,6 +121,13 @@ for line in sys.stdin:
         elif subtype == "apply_flag_settings":
             assert request["settings"] == {"effortLevel": "low"}, request
             send(reply)
+        elif subtype == "remote_control":
+            if request["enabled"]:
+                reply["response"]["response"] = {"session_url": "https://claude.ai/code/session_fake"}
+                send(reply)
+                send({"type": "system", "subtype": "bridge_state", "state": "connected", "session_id": session})
+            else:
+                send(reply)
         elif subtype == "set_permission_mode":
             mode = request["mode"]
             reply["response"]["response"] = {"mode": mode}
@@ -135,7 +144,11 @@ for line in sys.stdin:
         continue
     assert message["type"] == "user" and message["parent_tool_use_id"] is None, message
     scenario = message["message"]["content"]
+    if scenario == "crash-early":
+        sys.exit(8)
     system_init()
+    send({"type": "user", "message": message["message"], "parent_tool_use_id": None, "isReplay": True,
+          "session_id": session})
     if scenario == "crash":
         sys.exit(7)
     elif scenario == "stream":
@@ -165,6 +178,25 @@ for line in sys.stdin:
         tool("tool-" + scenario, "Bash", {"command": "echo hi"})
         ask(scenario, "Bash", {"command": "echo hi"}, description="Print a greeting",
             blocked_path=cwd + "/outside.txt")
+    elif scenario == "remote":
+        text("msg-local", "Local answer")
+        result()
+        # Then a prompt typed on the phone, which only reaches Neovim as a replay.
+        system_init()
+        send({"type": "user", "message": {"role": "user", "content": "From the phøne"}, "parent_tool_use_id": None,
+              "isReplay": True, "origin": {"kind": "human"}, "session_id": session})
+        text("msg-remote", "Remote answer")
+        time.sleep(0.5)  # Let Neovim show the remote turn as running.
+        result()
+    elif scenario == "cancelled":
+        tool("tool-cancelled", "AskUserQuestion", {"questions": QUESTIONS})
+        send({"type": "control_request", "request_id": "request-cancelled", "request": {
+            "subtype": "can_use_tool", "tool_name": "AskUserQuestion", "input": {"questions": QUESTIONS}}})
+        send({"type": "control_cancel_request", "request_id": "request-cancelled"})
+        tool_result("tool-cancelled")
+        text("msg-cancelled", "Answered on the phone")
+        time.sleep(0.5)  # The turn is still running when the request is withdrawn.
+        result()
     elif scenario == "error":
         result("success", True, value="API Error: overloaded")
     elif scenario != "wait":
