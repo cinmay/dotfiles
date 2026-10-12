@@ -242,6 +242,31 @@ local function run()
 	end)
 	wait_title("low · Auto ·")
 
+	-- Remote Control: prompts typed elsewhere appear in the history, marked as remote.
+	choose("Remote Control")
+	wait(function()
+		return has_title("Remote") and has_history("> Remote Control on: https://claude.ai/code/session_fake")
+	end, "Remote Control on")
+	send("remote")
+	wait(function()
+		return has_history("## You (remote)\n\nFrom the phøne") and has_history("Remote answer")
+	end, "remote prompt")
+	assert(has_title("Running"), "A remote turn should show as running")
+	done()
+	assert(has_history("## You\n\nremote"), "Own prompt shown as remote")
+	choose("Remote Control")
+	wait(function()
+		return not has_title("Remote") and has_history("> Remote Control off")
+	end, "Remote Control off")
+
+	send("cancelled")
+	wait(function()
+		return has_history("Answered on the phone")
+	end, "request answered elsewhere")
+	assert(has_title("Running") and not has_title("Response required"), "Withdrawn request still pending")
+	assert(vim.api.nvim_win_get_buf(window("prompt")) == buffer("prompt"), "Withdrawn request still shown")
+	done()
+
 	-- Questions: one at a time, single choice then multi-select; stale keys do nothing.
 	send("question")
 	assert(request():find("Which size?", 1, true))
@@ -311,6 +336,15 @@ local function run()
 	wait(function()
 		return has_title("Error") and has_history("API Error: overloaded")
 	end, "turn error")
+
+	-- A prompt Claude never acknowledged goes back to the prompt buffer.
+	send("crash-early")
+	wait_title("Error")
+	assert(text("prompt") == "crash-early", "Unacknowledged prompt was lost")
+	assert(not has_history("## You\n\ncrash-early"))
+	claude.open()
+	wait_title("Ready")
+	prompt("")
 
 	-- A crash keeps the history; reopening resumes the same session.
 	send("crash")
@@ -524,7 +558,7 @@ local function run()
 	wait_title("Interrupted")
 	print(
 		"PASS: layout/:q, streaming, tools, notices, settings menu, questions, plans, permissions, hidden requests,"
-			.. " interrupt, errors, reconnect, resume, drafts, Telescope, Harpoon, commands, file mentions"
+			.. " interrupt, errors, reconnect, resume, drafts, Telescope, Harpoon, Remote Control, commands, file mentions"
 	)
 end
 
