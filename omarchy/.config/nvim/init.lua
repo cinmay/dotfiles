@@ -254,7 +254,7 @@ require("local_tts").setup({
 	voice = "af_heart",
 	response_format = "mp3",
 	tmp_dir = "/tmp/nvim-tts",
-	max_chars = 12000,
+	max_chars = 100000,
 	volume = 180,
 	volume_max = 200,
 	mappings = {
