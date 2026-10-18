@@ -643,8 +643,9 @@ require("lazy").setup({
 				-- Conform can also run multiple formatters sequentially
 				-- python = { "isort", "black" },
 				--
-				-- You can use 'stop_after_first' to run the first available formatter from the list
-				-- javascript = { "prettierd", "prettier", stop_after_first = true },
+				-- Uses the project's own Prettier from node_modules. Projects without it
+				-- fall back to the LSP formatter (see lsp_format above).
+				javascript = { "prettier" },
 			},
 		},
 	},
