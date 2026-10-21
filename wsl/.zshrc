@@ -1,3 +1,9 @@
+# Start every terminal inside tmux, reattaching to the "main" session if it
+# already exists. Skipped inside tmux itself and in the VS Code terminal.
+if [[ -o interactive && -z "$TMUX" && "$TERM_PROGRAM" != "vscode" ]] && command -v tmux >/dev/null; then
+  exec tmux new-session -A -s main
+fi
+
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
