@@ -142,8 +142,11 @@ a terminal, for example) has it open. Finish there first; to continue a Neovim
 chat in the CLI, use `claude --resume <id>` with the session ID shown at the top
 of the history.
 
-Unsent drafts and reading positions are kept per conversation while Neovim is
-open. A draft typed in a new, unsent chat comes back with `<leader>ana`.
+Unsent drafts are kept per conversation on disk, in
+`~/.local/state/nvim/claude-drafts/`, so they survive restarting Neovim. A draft is
+saved when you leave the prompt or change it in normal mode, and deleted once it
+is sent. A draft typed in a new, unsent chat belongs to its directory and comes
+back with `<leader>ana`. Reading positions are kept only while Neovim is open.
 
 Use **Ctrl-H** in either chat buffer to bookmark the conversation in your Harpoon
 list (after the first message). Claude conversations appear as
@@ -192,7 +195,7 @@ and multi-select, stale keys), plans, allowed and denied permissions, requests
 arriving while hidden, interrupting, turn errors, crashes with reconnect, native
 splits, and `:q`. Resume runs against a temporary session store with rewound
 branches, hidden entries, a missing directory, and a session open elsewhere. It
-also checks per-conversation drafts and the installed Telescope picker, and uses
-real Harpoon with an isolated data directory; your sessions and bookmarks are
-not touched. Python 3 and the Telescope, Plenary, and Harpoon installations under
+also checks per-conversation drafts, read back from disk, and the installed
+Telescope picker, and uses real Harpoon; data and state directories are
+temporary, so your sessions, drafts, and bookmarks are not touched. Python 3 and the Telescope, Plenary, and Harpoon installations under
 Neovim's data directory are required.

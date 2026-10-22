@@ -73,8 +73,13 @@ returns to its existing view. Use `:CodexRefresh` after continuing it in another
 client. Finish or interrupt a running turn before selecting a different
 conversation; returning to code is always available.
 
-Harpoon persists only the bookmark. Codex owns the history. Unsent drafts and
-reading positions are kept per conversation in memory while Neovim is open.
+Harpoon persists only the bookmark. Codex owns the history. Unsent drafts are
+kept per conversation on disk, in `~/.local/state/nvim/codex-drafts/`, so they
+survive restarting Neovim. A draft is saved when you leave the prompt or change it
+in normal mode, and deleted once it is sent. A draft typed in a new, unsent
+conversation belongs to its directory and comes back with `<leader>ano`. While
+another conversation loads, the prompt is read-only, so typing cannot end up in
+the draft you are leaving. Reading positions are kept only while Neovim is open.
 
 ## Files and directories
 
@@ -139,7 +144,7 @@ A failed resume never creates a replacement conversation. Failed send requests
 retain the draft. After a lost connection, reopen/refresh and inspect history
 before retrying: the server may have accepted a prompt before disconnecting.
 Exiting Neovim stops its child process; this integration is not a background
-service. Unsent drafts live only in the Neovim instance.
+service. Unsent drafts are saved on disk and return in the next Neovim.
 
 ## Configuration
 
@@ -163,11 +168,12 @@ NVIM_LOG_FILE=/tmp/codex-nvim-test.log nvim --headless -u NONE -i NONE \
 The test peer never runs a model or touches your Codex history. It exercises
 fragmented/Unicode streaming, paginated and legacy history, model selection,
 command/file/permission approvals, questions, stale approval callbacks,
-cancellation, failed sends/resumes, process crashes, draft preservation, and the
-installed Telescope pickers. It also checks native splits, `:q`, returning to
+cancellation, failed sends/resumes, process crashes, draft preservation (including
+from disk and the locked prompt while loading), and the installed Telescope
+pickers. It also checks native splits, `:q`, returning to
 unsaved code, and real Harpoon selection, menu ordering, and bookmark persistence.
-Harpoon test data uses an isolated temporary directory; your bookmarks are not
-modified. Python 3 and the existing Telescope/Plenary/Harpoon installations under
+Harpoon test data and drafts use isolated temporary directories; your bookmarks
+and drafts are not modified. Python 3 and the existing Telescope/Plenary/Harpoon installations under
 Neovim's data directory are required.
 
 Optionally validate all outgoing requests and approval responses against the

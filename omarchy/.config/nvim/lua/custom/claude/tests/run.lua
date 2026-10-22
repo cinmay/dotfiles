@@ -5,8 +5,9 @@ vim.opt.rtp:append(config)
 for _, plugin in ipairs({ "plenary.nvim", "telescope.nvim", "harpoon" }) do
 	vim.opt.rtp:append(vim.fn.stdpath("data") .. "/lazy/" .. plugin)
 end
--- Real Harpoon persistence and a Claude session store, isolated from the user's data.
+-- Real Harpoon persistence, drafts, and a Claude session store, isolated from the user's data.
 vim.env.XDG_DATA_HOME = vim.fn.tempname()
+vim.env.XDG_STATE_HOME = vim.fn.tempname()
 vim.fn.mkdir(vim.fn.stdpath("data"), "p")
 local store = vim.fn.tempname()
 vim.env.CLAUDE_CONFIG_DIR = store
@@ -185,10 +186,20 @@ local function run()
 	assert(vim.deep_equal(vim.api.nvim_win_get_cursor(0), { 2, 4 }))
 	claude.open()
 	assert(text("prompt") == "Draft survives :q")
+	-- Drafts are on disk, so a new prompt buffer (as after restarting Neovim) gets them back.
+	local function draft_files()
+		return vim.fn.glob(vim.fn.stdpath("state") .. "/claude-drafts/*", false, true)
+	end
+	claude.hide()
+	assert(#draft_files() == 1, "Draft was not saved to disk")
+	vim.api.nvim_buf_delete(buffer("prompt"), { force = true })
+	claude.open()
+	assert(text("prompt") == "Draft survives :q", "Draft was not read back from disk")
 
 	send("stream")
 	done()
 	assert(text("prompt") == "")
+	assert(#draft_files() == 0, "Sending left the draft on disk")
 	assert(has_history("## You\n\nstream"))
 	assert(has_history("Høllo — final authoritative text"))
 	local _, count = text("history"):gsub("final authoritative text", "")

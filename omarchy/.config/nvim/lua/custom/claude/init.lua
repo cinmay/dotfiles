@@ -38,7 +38,9 @@ local history_buf, prompt_buf, request_buf, history_win, prompt_win
 local render_pending = false
 local return_state, history_view, prompt_view
 local changing_layout = false
-local drafts = {}
+-- Drafts are kept on disk so they survive restarting Neovim; reading positions only in memory.
+local draft_dir = vim.fn.stdpath("state") .. "/claude-drafts"
+local views = {}
 
 local function notify(message, level)
 	vim.notify("Claude: " .. message, level or vim.log.levels.INFO)
@@ -255,6 +257,41 @@ local function prompt_text()
 	return table.concat(vim.api.nvim_buf_get_lines(prompt_buf, 0, -1, false), "\n")
 end
 
+-- An unsent chat has no session ID yet, so its draft belongs to its directory.
+local function new_chat_draft(cwd)
+	return "new" .. cwd
+end
+
+local function draft_key()
+	return state.session_id or new_chat_draft(state.cwd or vim.fn.getcwd())
+end
+
+local function draft_file(key)
+	return draft_dir .. "/" .. key:gsub("[^%w-]", "-") .. ".md"
+end
+
+-- A draft on disk is saved, so :qa does not stop for the prompt.
+local function load_draft(key)
+	local file = draft_file(key)
+	local lines = vim.fn.filereadable(file) == 1 and vim.fn.readfile(file) or { "" }
+	vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, lines)
+	vim.bo[prompt_buf].modified = false
+end
+
+local function save_draft()
+	if not prompt_buf or not vim.api.nvim_buf_is_valid(prompt_buf) then
+		return
+	end
+	local file = draft_file(draft_key())
+	if prompt_text():match("%S") then
+		vim.fn.mkdir(draft_dir, "p")
+		vim.fn.writefile(vim.api.nvim_buf_get_lines(prompt_buf, 0, -1, false), file)
+	else
+		os.remove(file)
+	end
+	vim.bo[prompt_buf].modified = false
+end
+
 local function finish(status, err)
 	if state.started then
 		state.elapsed = math.floor((vim.uv.hrtime() - state.started) / 1e9)
@@ -270,6 +307,7 @@ local function fail(err)
 	-- A prompt Claude never acknowledged goes back to the prompt buffer instead of being lost.
 	if state.pending_prompt and prompt_text() == "" then
 		vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, vim.split(state.pending_prompt, "\n", { plain = true }))
+		save_draft()
 	end
 	state.ready, state.pending_prompt = false, nil
 	finish("Error", err)
@@ -321,6 +359,10 @@ local function on_message(message)
 	end
 	if message.type == "system" then
 		if message.subtype == "init" then
+			if not state.session_id then
+				-- The new chat's draft is saved under its session from now on.
+				os.remove(draft_file(draft_key()))
+			end
 			state.session_id, state.model = message.session_id, message.model
 			state.mode, state.cwd = message.permissionMode, message.cwd
 		elseif message.subtype == "status" then
@@ -593,6 +635,11 @@ local function show()
 				history_buf = buf
 			else
 				prompt_buf = buf
+				load_draft(draft_key())
+				vim.api.nvim_create_autocmd({ "BufLeave", "InsertLeave", "TextChanged" }, {
+					buffer = buf,
+					callback = save_draft,
+				})
 			end
 		end
 	end
@@ -631,14 +678,19 @@ function M.open()
 	end
 end
 
--- Drafts and reading positions are kept per conversation; an unsent chat is "new".
+-- Drafts and reading positions are kept per conversation.
 local function switch_draft(target)
+	local current = draft_key()
+	if target == current then
+		return
+	end
 	remember_views()
-	drafts[state.session_id or "new"] = { text = prompt_text(), history_view = history_view, prompt_view = prompt_view }
-	local draft = drafts[target or "new"] or { text = "" }
-	drafts[target or "new"] = nil
-	vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, vim.split(draft.text, "\n", { plain = true }))
-	history_view, prompt_view = draft.history_view, draft.prompt_view
+	save_draft()
+	views[current] = { history = history_view, prompt = prompt_view }
+	load_draft(target)
+	local view = views[target] or {}
+	views[target] = nil
+	history_view, prompt_view = view.history, view.prompt
 end
 
 function M.new()
@@ -647,9 +699,7 @@ function M.new()
 		return
 	end
 	show()
-	if state.session_id then
-		switch_draft(nil)
-	end
+	switch_draft(new_chat_draft(vim.fn.getcwd()))
 	start_session()
 end
 
@@ -674,9 +724,7 @@ function M.resume(id)
 		return
 	end
 	show()
-	if id ~= state.session_id then
-		switch_draft(id)
-	end
+	switch_draft(id)
 	state.entries, state.tools, state.live = {}, {}, nil
 	state.session_id, state.title, state.cwd = id, session.title, session.cwd
 	state.model, state.effort, state.context_tokens, state.context_window = session.model, session.effort, nil, nil
@@ -901,6 +949,7 @@ function M.send()
 	end
 	if send_text(text) then
 		vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, { "" })
+		save_draft()
 	end
 end
 
@@ -1101,6 +1150,7 @@ function M.setup(opts)
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		group = group,
 		callback = function()
+			save_draft()
 			stop_timer()
 			if process then
 				process:stop()

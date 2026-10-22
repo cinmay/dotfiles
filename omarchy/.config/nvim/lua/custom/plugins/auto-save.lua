@@ -8,6 +8,10 @@ return {
 			if vim.bo[buf].filetype == "harpoon" then
 				return false
 			end
+			-- Chat prompts such as claude://prompt are not files; they keep their own drafts.
+			if vim.api.nvim_buf_get_name(buf):match("^%a+://") then
+				return false
+			end
 
 			return vim.bo[buf].buftype == ""
 		end,

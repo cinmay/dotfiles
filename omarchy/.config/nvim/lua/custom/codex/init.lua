@@ -12,7 +12,10 @@ local history_buf, prompt_buf, history_win, prompt_win
 local render_pending = false
 local return_state, history_view, prompt_view
 local changing_layout = false
-local drafts = {}
+-- Drafts are kept on disk so they survive restarting Neovim; reading positions only in memory.
+local draft_dir = vim.fn.stdpath("state") .. "/codex-drafts"
+local draft_key -- The conversation whose draft the prompt buffer holds.
+local views = {}
 
 local function notify(message, level)
 	vim.notify("Codex: " .. message, level or vim.log.levels.INFO)
@@ -141,6 +144,9 @@ end
 
 local function fail(err)
 	state.loaded = false
+	if prompt_buf and vim.api.nvim_buf_is_valid(prompt_buf) then
+		vim.bo[prompt_buf].modifiable = true
+	end
 	finish("Error", err)
 	notify(err, vim.log.levels.ERROR)
 end
@@ -234,6 +240,38 @@ local function prompt_text()
 		return ""
 	end
 	return table.concat(vim.api.nvim_buf_get_lines(prompt_buf, 0, -1, false), "\n")
+end
+
+-- A new conversation's draft belongs to its directory until the first prompt is sent,
+-- so starting another new conversation brings it back.
+local function new_chat_draft(cwd)
+	return "new" .. cwd
+end
+
+local function draft_file(key)
+	return draft_dir .. "/" .. key:gsub("[^%w-]", "-") .. ".md"
+end
+
+-- A draft on disk is saved, so :qa does not stop for the prompt.
+local function load_draft(key)
+	local file = draft_file(key)
+	local lines = vim.fn.filereadable(file) == 1 and vim.fn.readfile(file) or { "" }
+	vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, lines)
+	vim.bo[prompt_buf].modified = false
+end
+
+local function save_draft()
+	if not draft_key or not prompt_buf or not vim.api.nvim_buf_is_valid(prompt_buf) then
+		return
+	end
+	local file = draft_file(draft_key)
+	if prompt_text():match("%S") then
+		vim.fn.mkdir(draft_dir, "p")
+		vim.fn.writefile(vim.api.nvim_buf_get_lines(prompt_buf, 0, -1, false), file)
+	else
+		os.remove(file)
+	end
+	vim.bo[prompt_buf].modified = false
 end
 
 local function remember_views()
@@ -351,6 +389,13 @@ local function show()
 				history_buf = buf
 			else
 				prompt_buf = buf
+				if draft_key then
+					load_draft(draft_key)
+				end
+				vim.api.nvim_create_autocmd({ "BufLeave", "InsertLeave", "TextChanged" }, {
+					buffer = buf,
+					callback = save_draft,
+				})
 			end
 		end
 	end
@@ -452,7 +497,30 @@ local function load_history(thread, callback)
 	page()
 end
 
+-- Drafts and reading positions are kept per conversation.
+local function switch_draft(target)
+	if target == draft_key then
+		return
+	end
+	remember_views()
+	save_draft()
+	if draft_key then
+		views[draft_key] = { history = history_view, prompt = prompt_view }
+	end
+	draft_key = target
+	load_draft(target)
+	local view = views[target] or {}
+	views[target] = nil
+	history_view, prompt_view = view.history, view.prompt
+end
+
 local function load_session(id, cwd, callback)
+	-- Reconnecting keeps the draft; another conversation brings its own once it has loaded.
+	local draft = not id and new_chat_draft(cwd) or id ~= state.thread_id and id or nil
+	if draft then
+		-- Until then, typing would end up in the draft of the conversation being left.
+		vim.bo[prompt_buf].modifiable = false
+	end
 	state.busy, state.status = true, "Loading"
 	title()
 	ensure_client(function()
@@ -478,12 +546,10 @@ local function load_session(id, cwd, callback)
 				end
 				if state.thread_id and state.thread_id ~= result.thread.id then
 					client:request("thread/unsubscribe", { threadId = state.thread_id }, function() end)
-					remember_views()
-					drafts[state.thread_id] =
-						{ text = prompt_text(), history_view = history_view, prompt_view = prompt_view }
-					local draft = drafts[result.thread.id] or { text = "" }
-					vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, vim.split(draft.text, "\n", { plain = true }))
-					history_view, prompt_view = draft.history_view, draft.prompt_view
+				end
+				vim.bo[prompt_buf].modifiable = true
+				if draft then
+					switch_draft(draft)
 				end
 				state.thread_id, state.cwd, state.name = result.thread.id, result.cwd, result.thread.name
 				state.model, state.effort = result.model, result.reasoningEffort
@@ -555,6 +621,12 @@ function M.send()
 		if prompt_text() == text then
 			vim.api.nvim_buf_set_lines(prompt_buf, 0, -1, false, { "" })
 		end
+		-- A new conversation's draft now belongs to the conversation itself.
+		if draft_key then
+			os.remove(draft_file(draft_key))
+		end
+		draft_key = state.thread_id
+		save_draft()
 		title()
 	end)
 end
@@ -577,6 +649,8 @@ function M.resume(id)
 	-- Another client may have appended turns since this process loaded the session.
 	-- Restart before a handoff so both agent context and displayed history come from disk.
 	if client then
+		-- The prompt stays locked until the session has loaded (see load_session).
+		vim.bo[prompt_buf].modifiable = false
 		state.busy, state.status = true, "Loading"
 		title()
 		client:restart(function(err)
@@ -817,6 +891,7 @@ function M.setup(opts)
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		group = group,
 		callback = function()
+			save_draft()
 			state.exiting = true
 			stop_timer()
 			if client then
