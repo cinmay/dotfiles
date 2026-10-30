@@ -6,7 +6,7 @@ local workspaces = {
   { id = 6, name = "terminal" },
   { id = 10, name = "editor" },
   { id = 11, name = "music" },
-  { id = 12, name = "chatgpt" },
+  { id = 12, name = "agent" },
   { id = 13, name = "obsidian" },
   { id = 14, name = "discord" },
   { id = 15, name = "git" },

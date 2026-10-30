@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Focus-or-launch the native ChatGPT client strictly on workspace 12.
+# Focus-or-launch Omarchy's default coding agent strictly on workspace 12.
 
 set -euo pipefail
 
@@ -7,12 +7,13 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && p
 HYPR_DISPATCH="$SCRIPT_DIR/hypr-lua-dispatch"
 
 WS=12
-CLASS_RE='^(chatgpt|com\.openai\.ChatGPT)$'
+# omarchy-agent gives every agent window this app-id, whichever agent is the default.
+CLASS_RE='^org\.omarchy\.agent$'
 
-# 1) Go to the ChatGPT workspace
+# 1) Go to the agent workspace
 "$HYPR_DISPATCH" workspace "$WS"
 
-# 2) If a native ChatGPT window exists on WS 12, focus it
+# 2) If an agent window exists on WS 12, focus it
 ADDR_ON_WS="$(
   hyprctl -j clients \
     | jq -r --argjson ws "$WS" --arg re "$CLASS_RE" '
@@ -34,5 +35,5 @@ if [ -n "$ADDR_ON_WS" ]; then
   exit 0
 fi
 
-# 3) Otherwise, launch a new native client window on WS 12
-exec uwsm app -- chatgpt
+# 3) Otherwise, launch the default agent on WS 12 (--pick opens the chooser if none is set)
+exec omarchy-agent --pick

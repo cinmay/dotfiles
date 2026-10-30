@@ -18,7 +18,7 @@ BarWidget {
     case 6: return "terminal"
     case 10: return "editor"
     case 11: return "music"
-    case 12: return "chatgpt"
+    case 12: return "agent"
     case 13: return "obsidian"
     case 14: return "discord"
     case 15: return "git"
