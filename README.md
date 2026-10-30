@@ -74,6 +74,18 @@ stow -t "$HOME" omarchy
 On the Dell XPS 15 9520 also install `nvidia-container-toolkit` for the GPU
 Kokoro image.
 
+On the desktop (`stue-pc`) mount the second NVMe drive, labelled `extraDisk`,
+which holds the music library and the Steam library:
+
+```bash
+sudo mkdir -p /mnt/extraDisk
+echo 'UUID=aff989d4-e805-4c97-bd31-0bc5b78d3526  /mnt/extraDisk  ext4  defaults,noatime,nofail  0 2' | sudo tee -a /etc/fstab
+sudo systemctl daemon-reload && sudo mount /mnt/extraDisk
+rmdir ~/Music && ln -s /mnt/extraDisk/Music ~/Music
+```
+
+In Steam, add `/mnt/extraDisk/SteamLibrary` under Settings → Storage.
+
 ### WSL
 
 ```bash
