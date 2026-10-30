@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "defaultMode": "auto"
+  },
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    }
+  },
+  "skipWorkflowUsageWarning": true,
+  "theme": "auto",
+  "agentPushNotifEnabled": true,
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  }
+}

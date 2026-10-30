@@ -72,6 +72,13 @@ stow -t "$HOME" omarchy
 stow -t "$HOME" wsl
 ```
 
+### Claude Code (all machines)
+
+```bash
+mkdir -p ~/.claude  # without it stow links the whole directory, pulling credentials and history into the repo
+stow -t "$HOME" claude
+```
+
 #### ChatGPT blank window with `[WARN:COPY MODE]`
 
 This title comes from WSLg. Check its Windows display connection:
