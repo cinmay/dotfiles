@@ -156,7 +156,17 @@ Dependencies on Arch:
 sudo pacman -S mpv socat mpc
 ```
 
-Start Kokoro-FastAPI with Podman:
+Kokoro-FastAPI starts at login from the Podman quadlets in
+`omarchy/.config/containers/systemd/`. The Dell XPS 15 9520 runs the GPU image
+(needs `nvidia-container-toolkit`); every other machine runs the CPU image.
+
+```bash
+sudo pacman -S podman
+systemctl --user daemon-reload
+systemctl --user start kokoro-tts-cpu   # or kokoro-tts-gpu on the XPS
+```
+
+Start Kokoro-FastAPI manually with Podman:
 
 ```bash
 podman run --rm \

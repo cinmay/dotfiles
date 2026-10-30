@@ -15,6 +15,8 @@ Environment=API_LOG_LEVEL=INFO
 AddDevice=nvidia.com/gpu=all
 
 [Service]
+# Only the XPS has a GPU that beats the CPU; other machines run kokoro-tts-cpu.
+ExecCondition=/usr/share/omarchy/bin/omarchy-hw-match "XPS 15 9520"
 Restart=on-failure
 RestartSec=5
 

@@ -1,0 +1,21 @@
+[Unit]
+Description=Kokoro FastAPI local TTS CPU
+After=network-online.target
+
+[Container]
+Image=ghcr.io/remsky/kokoro-fastapi-cpu:latest
+ContainerName=kokoro-tts
+PublishPort=127.0.0.1:8880:8880
+Environment=HOST=0.0.0.0
+Environment=PORT=8880
+Environment=DEFAULT_VOICE=af_heart
+Environment=API_LOG_LEVEL=INFO
+
+[Service]
+# Runs everywhere kokoro-tts-gpu does not.
+ExecCondition=/bin/sh -c '! /usr/share/omarchy/bin/omarchy-hw-match "XPS 15 9520"'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
