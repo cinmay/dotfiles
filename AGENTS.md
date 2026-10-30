@@ -13,6 +13,7 @@ This setup is a deliberate professional workspace for focus and personal excelle
 
 ## Project Structure & Module Organization
 - Reference docs and setup notes are in `README.md`
+- `packages.txt` lists packages the configs need beyond a fresh Omarchy install; add to it whenever a config starts depending on a new package.
 
 ## Build, Test, and Development Commands
 - `stow -t "$HOME" omarchy` — symlink the Omarchy config into `$HOME`.

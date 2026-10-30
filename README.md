@@ -61,10 +61,18 @@ https://github.com/mg979/vim-visual-multi
 
 ### Omarchy
 
+Install the packages the configs need, then link them into `$HOME`. Move any
+file stow reports as a conflict (Omarchy's fresh-install defaults) out of the
+way first.
+
 ```bash
+grep -v '^#' packages.txt | sudo pacman -S --needed -
 mkdir -p ~/.local/state/mpd  # mpd's log and database; gitignored, so not in the clone
 stow -t "$HOME" omarchy
 ```
+
+On the Dell XPS 15 9520 also install `nvidia-container-toolkit` for the GPU
+Kokoro image.
 
 ### WSL
 
@@ -161,7 +169,6 @@ Kokoro-FastAPI starts at login from the Podman quadlets in
 (needs `nvidia-container-toolkit`); every other machine runs the CPU image.
 
 ```bash
-sudo pacman -S podman
 systemctl --user daemon-reload
 systemctl --user start kokoro-tts-cpu   # or kokoro-tts-gpu on the XPS
 ```

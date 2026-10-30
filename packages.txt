@@ -1,0 +1,14 @@
+# Packages the configs need on top of a fresh Omarchy install.
+# Install: grep -v '^#' packages.txt | sudo pacman -S --needed -
+
+# Symlink the dotfiles into $HOME
+stow
+
+# Kokoro TTS for Neovim (omarchy/.config/containers/systemd)
+podman
+
+# Music workspace: SUPER + M, rmpc and media keys
+mpd
+mpc
+rmpc
+mpd-mpris
