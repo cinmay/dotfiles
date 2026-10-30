@@ -62,6 +62,7 @@ https://github.com/mg979/vim-visual-multi
 ### Omarchy
 
 ```bash
+mkdir -p ~/.local/state/mpd  # mpd's log and database; gitignored, so not in the clone
 stow -t "$HOME" omarchy
 ```
 
