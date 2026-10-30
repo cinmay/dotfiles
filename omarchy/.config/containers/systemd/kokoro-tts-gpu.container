@@ -1,6 +1,10 @@
 [Unit]
 Description=Kokoro FastAPI local TTS GPU
-After=network-online.target
+
+[Quadlet]
+# Omarchy masks the wait-online services, so network-online.target never
+# activates and the default network dependency would block startup forever.
+DefaultDependencies=false
 
 [Container]
 Image=ghcr.io/remsky/kokoro-fastapi-gpu:latest
