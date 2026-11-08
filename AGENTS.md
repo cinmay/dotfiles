@@ -5,6 +5,9 @@
 - Prefer simple, explicit solutions over clever or overly flexible ones.
 - Code should read well for a first-time contributor; the shell/runtime is secondary.
 
+## Engineering Practices
+- Before writing or changing code, read and follow [prompt-seed.md](prompt-seed.md); it holds the engineering practices for all code in this repo.
+
 ## Why This Repo Exists
 Why: The purpose of my setup is to reinforce my pursuit of personal excellence in professional software development.
 
