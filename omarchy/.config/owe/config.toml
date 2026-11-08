@@ -1,7 +1,6 @@
 # Omarchy's wallpaper engine (owe). Defaults: /usr/share/doc/owe/config.toml.example
 # Apply with `owe reload-config`.
 [pause]
-# Keep the fans quiet: the wallpaper only moves on an empty workspace,
-# and holds its frame while on battery.
-occupied_workspace = true
+# The terminal is translucent, so keep animating behind windows; hold the
+# frame on battery to keep the XPS fans quiet.
 battery_mode = "pause"
