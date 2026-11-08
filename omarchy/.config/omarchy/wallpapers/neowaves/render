@@ -11,7 +11,10 @@ theme=$(cat "$HOME/.local/state/omarchy/current/theme.name")
 colors="$HOME/.local/state/omarchy/current/theme/colors.toml"
 output="$HOME/.config/omarchy/backgrounds/$theme/neowaves.mp4"
 shader=$(mktemp --suffix=.glsl)
-trap 'rm -f "$shader"' EXIT
+# Render beside the output and swap it in when done: overwriting the video
+# while owe plays it corrupts the playback.
+partial="${output%.mp4}.partial.mp4"
+trap 'rm -f "$shader" "$partial"' EXIT
 
 theme_color() {
   local hex
@@ -32,7 +35,11 @@ mkdir -p "$(dirname "$output")"
 ffmpeg -v error -y -vaapi_device /dev/dri/by-path/pci-0000:00:02.0-render \
   -f lavfi -i "color=black:s=${width}x${height}:r=30:d=120" \
   -vf "format=yuv444p,libplacebo=custom_shader_path=$shader:format=p010le,hwupload" \
-  -c:v hevc_vaapi -profile:v main10 -rc_mode CQP -qp 20 -movflags +faststart "$output"
+  -c:v hevc_vaapi -profile:v main10 -rc_mode CQP -qp 20 -movflags +faststart "$partial"
+mv "$partial" "$output"
 
 omarchy theme bg set "$output"
+# Setting the same path again does not reopen the file, so restart the
+# renderer to make it pick up the new video.
+owe render-restart >/dev/null
 echo "$output"
