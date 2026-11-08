@@ -1,4 +1,5 @@
 The goal while coding is to create a maintainable, high-quality solution that is easy to understand, change, and verify.
+The purpose of code is to explain to other developers and agents what we want the computer to do. 
 Keep in mind good engineering practices, such as KISS, YAGNI.
 Aim for low coupling and high cohesion and separation of concerns. If the code is changed together, it should stay together.
 Avoid adding new dependencies without a clear benefit.
