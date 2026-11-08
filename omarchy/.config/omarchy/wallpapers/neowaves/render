@@ -10,6 +10,8 @@ height=${2:-2400}
 theme=$(cat "$HOME/.local/state/omarchy/current/theme.name")
 colors="$HOME/.local/state/omarchy/current/theme/colors.toml"
 output="$HOME/.config/omarchy/backgrounds/$theme/neowaves.mp4"
+# The video must be exactly one loop long to repeat seamlessly.
+loop_seconds=$(grep -o '#define LOOP [0-9.]*' "$here/neowaves.glsl" | cut -d' ' -f3)
 shader=$(mktemp --suffix=.glsl)
 # Render beside the output and swap it in when done: overwriting the video
 # while owe plays it corrupts the playback.
@@ -33,7 +35,7 @@ theme_color() {
 mkdir -p "$(dirname "$output")"
 # 10-bit HEVC on the Intel GPU keeps the dark glow free of banding.
 ffmpeg -v error -y -vaapi_device /dev/dri/by-path/pci-0000:00:02.0-render \
-  -f lavfi -i "color=black:s=${width}x${height}:r=30:d=120" \
+  -f lavfi -i "color=black:s=${width}x${height}:r=30:d=$loop_seconds" \
   -vf "format=yuv444p,libplacebo=custom_shader_path=$shader:format=p010le,hwupload" \
   -c:v hevc_vaapi -profile:v main10 -rc_mode CQP -qp 20 -movflags +faststart "$partial"
 mv "$partial" "$output"

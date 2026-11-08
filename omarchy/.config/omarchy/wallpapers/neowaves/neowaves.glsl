@@ -4,7 +4,7 @@
 precision highp float;
 #define T (float(frame) / 30.0)
 #define PI 3.14159265
-#define LOOP 120.0
+#define LOOP 480.0
 #define W (2.0 * PI / LOOP)
 #define LINES 7
 
@@ -31,8 +31,8 @@ vec4 hook() {
     float y = a1 * sin(ph1) + 0.045 * sin(ph2) + (fi - 3.0) * 0.034;
     float slope = a1 * 1.1 * cos(ph1) + 0.045 * 2.9 * cos(ph2);
     float d = abs(p.y - y) / sqrt(1.0 + slope * slope);          // true distance, so steep parts stay thick
-    float core = exp(-pow(d / 0.0045, 2.0));
-    float glow = 0.10 * exp(-d / 0.012) + 0.025 * exp(-d / 0.05);  // the blur: two soft halos
+    float core = exp(-pow(d / 0.0032, 2.0));
+    float glow = 0.10 * exp(-d / 0.0085) + 0.025 * exp(-d / 0.04);  // the blur: two soft halos
     light += toLinear(lineColor(fi)) * (core * 0.9 + glow);
     coreSum += core; coreSq += core * core;
     glowSum += glow; glowSq += glow * glow;
