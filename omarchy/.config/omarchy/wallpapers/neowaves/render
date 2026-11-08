@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
-# Render NeoWaves in the current Omarchy theme's colours as a seamless 4K loop
-# for the wallpaper engine (owe), then set it as the background.
+# Give the current Omarchy theme a NeoWaves background in its own colours: a
+# seamless 4K loop that the wallpaper engine (owe) plays.
+#
+# Renders are cached by content, not by theme name: the key hashes the exact
+# shader (theme colours included) and the resolution. A theme only renders the
+# first time its colours are seen, and editing the shader re-renders by itself.
+# The cache is never pruned; renders are about 100 MB each.
+#
+# Each theme's background folder gets a neowaves.mp4 link to its render, which
+# puts NeoWaves in Omarchy's background switcher. The script only switches the
+# background to NeoWaves when the theme gets a new render or when another
+# NeoWaves render is playing, so a background picked in the switcher stays.
+#
+# Runs from the theme-set hook, and by hand after editing the shader.
 # Usage: render [width height]   (defaults to 3840 2400)
 set -euo pipefail
 
@@ -9,19 +21,34 @@ width=${1:-3840}
 height=${2:-2400}
 theme=$(cat "$HOME/.local/state/omarchy/current/theme.name")
 colors="$HOME/.local/state/omarchy/current/theme/colors.toml"
-output="$HOME/.config/omarchy/backgrounds/$theme/neowaves.mp4"
+current_background_link="$HOME/.local/state/omarchy/current/background"
+cache="$HOME/.cache/neowaves"
+link="$HOME/.config/omarchy/backgrounds/$theme/neowaves.mp4"
 # The video must be exactly one loop long to repeat seamlessly.
 loop_seconds=$(grep -o '#define LOOP [0-9.]*' "$here/neowaves.glsl" | cut -d' ' -f3)
 shader=$(mktemp --suffix=.glsl)
-# Render beside the output and swap it in when done: overwriting the video
-# while owe plays it corrupts the playback.
-partial="${output%.mp4}.partial.mp4"
+partial=""
 trap 'rm -f "$shader" "$partial"' EXIT
 
 theme_color() {
   local hex
   hex=$(grep -m1 "^$1 *=" "$colors" | grep -o '#[0-9a-fA-F]\{6\}' | tr -d '#')
   printf '(vec3(%d.0, %d.0, %d.0) / 255.0)' "$((16#${hex:0:2}))" "$((16#${hex:2:2}))" "$((16#${hex:4:2}))"
+}
+
+current_background() {
+  readlink -f "$current_background_link"
+}
+
+playing_neowaves() {
+  [[ $(current_background) == "$cache"/*.mp4 ]]
+}
+
+# Touching marks the render as the latest one shown, which is the one that
+# keeps playing while another theme's render is generated.
+show() {
+  touch "$1"
+  omarchy theme bg set "$1"
 }
 
 {
@@ -32,16 +59,36 @@ theme_color() {
   cat "$here/neowaves.glsl"
 } >"$shader"
 
-mkdir -p "$(dirname "$output")"
-# 10-bit HEVC on the Intel GPU keeps the dark glow free of banding.
-ffmpeg -v error -y -vaapi_device /dev/dri/by-path/pci-0000:00:02.0-render \
-  -f lavfi -i "color=black:s=${width}x${height}:r=30:d=$loop_seconds" \
-  -vf "format=yuv444p,libplacebo=custom_shader_path=$shader:format=p010le,hwupload" \
-  -c:v hevc_vaapi -profile:v main10 -rc_mode CQP -qp 20 -movflags +faststart "$partial"
-mv "$partial" "$output"
+key=$({ cat "$shader"; echo "${width}x${height}"; } | sha256sum | cut -c1-16)
+video="$cache/$key.mp4"
+mkdir -p "$cache" "$(dirname "$link")"
 
-omarchy theme bg set "$output"
-# Setting the same path again does not reopen the file, so restart the
-# renderer to make it pick up the new video.
-owe render-restart >/dev/null
-echo "$output"
+if [[ $(readlink -f "$link") == "$video" ]]; then
+  # This theme already has its render; only swap out another theme's NeoWaves.
+  if playing_neowaves && [[ $(current_background) != "$video" ]]; then show "$video"; fi
+  exit 0
+fi
+
+if [[ ! -f $video ]]; then
+  if ! playing_neowaves; then
+    latest_render=$(ls -t "$cache"/*.mp4 2>/dev/null | head -1 || true)
+    if [[ -n $latest_render ]]; then show "$latest_render"; fi
+  fi
+
+  # A unique partial name lets two renders of the same colours run side by
+  # side; the second one to finish just replaces an identical file.
+  partial=$(mktemp "$cache/$key.XXXXXX.partial")
+  # 10-bit HEVC on the Intel GPU keeps the dark glow free of banding.
+  ffmpeg -v error -y -vaapi_device /dev/dri/by-path/pci-0000:00:02.0-render \
+    -f lavfi -i "color=black:s=${width}x${height}:r=30:d=$loop_seconds" \
+    -vf "format=yuv444p,libplacebo=custom_shader_path=$shader:format=p010le,hwupload" \
+    -c:v hevc_vaapi -profile:v main10 -rc_mode CQP -qp 20 -movflags +faststart -f mp4 "$partial"
+  mv "$partial" "$video"
+fi
+
+ln -sfn "$video" "$link"
+# The theme may have changed while rendering; then the render waits in the cache.
+if [[ $(cat "$HOME/.local/state/omarchy/current/theme.name") == "$theme" ]]; then
+  show "$video"
+fi
+echo "$video"
