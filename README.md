@@ -71,6 +71,16 @@ mkdir -p ~/.local/state/mpd  # mpd's log and database; gitignored, so not in the
 stow -t "$HOME" omarchy
 ```
 
+Omarchy saves `~/.config/omarchy/shell.json` by writing a new file over the
+link, both when the bar is changed and in update migrations, so stow later
+reports it as a conflict. Take the live file into the repo, relink it, and
+review what changed:
+
+```bash
+stow --adopt -t "$HOME" omarchy
+git diff
+```
+
 On the Dell XPS 15 9520 also install `nvidia-container-toolkit` for the GPU
 Kokoro image.
 
