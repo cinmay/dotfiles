@@ -14,7 +14,7 @@ fi
 # A first render takes minutes and theme switches wait for their hooks, so
 # each wallpaper renders in its own background job.
 # Logs: journalctl --user -u 'live-wallpaper-*'
-for wallpaper in "neowaves"; do
+for wallpaper in "neowaves" "mandelbrot spiral" "mandelbrot snowflake"; do
   systemd-run --user --quiet --collect --unit="live-wallpaper-$(date +%s%N)" \
     "$HOME/.config/omarchy/wallpapers/live-wallpaper" $wallpaper
 done
