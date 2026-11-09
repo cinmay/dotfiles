@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# Give the new theme its NeoWaves background (see wallpapers/neowaves/render).
-# A first render takes minutes and theme switches wait for their hooks, so it
-# runs as a background job. Logs: journalctl --user -u 'neowaves-*'
-systemd-run --user --quiet --collect --unit="neowaves-$(date +%s%N)" \
-  "$HOME/.config/omarchy/wallpapers/neowaves/render"

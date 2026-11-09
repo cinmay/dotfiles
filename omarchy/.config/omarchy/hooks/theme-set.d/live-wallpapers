@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Live wallpapers follow the theme (see wallpapers/live-wallpaper).
+#
+# Omarchy has already switched to the new theme's background. When the theme
+# being left was showing a live wallpaper, put that video back so it keeps
+# playing until the new theme's version is ready and takes over. Omarchy saves
+# the outgoing theme's background just before switching, so it is the newest
+# file in theme-backgrounds.
+previous_background=$(cat "$(ls -t "$HOME/.local/state/omarchy/theme-backgrounds/"* | head -1)" 2>/dev/null || true)
+if [[ $previous_background == "$HOME/.cache/live-wallpapers/"* && -f $previous_background ]]; then
+  omarchy theme bg set "$previous_background"
+fi
+
+# A first render takes minutes and theme switches wait for their hooks, so
+# each wallpaper renders in its own background job.
+# Logs: journalctl --user -u 'live-wallpaper-*'
+for wallpaper in "neowaves"; do
+  systemd-run --user --quiet --collect --unit="live-wallpaper-$(date +%s%N)" \
+    "$HOME/.config/omarchy/wallpapers/live-wallpaper" $wallpaper
+done

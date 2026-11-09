@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Give the current Omarchy theme a live wallpaper in its own colours: a
+# seamless video loop that the wallpaper engine (owe) plays.
+#
+# Each wallpaper is a folder next to this script whose make-video renders one
+# loop:  make-video <output.mp4> <width> <height> <colors.toml> [variant]
+#
+# Renders are cached by content, not by theme name: the key hashes the
+# wallpaper's files, the theme's colours, the variant and the resolution. A
+# theme only renders the first time its colours are seen, and editing a
+# wallpaper re-renders it by itself. The cache is never pruned.
+#
+# Each theme's background folder gets a <name>.mp4 link to its render, which
+# puts the wallpaper in Omarchy's background switcher. A finished render only
+# becomes the background when the same wallpaper is playing, so a background
+# picked in the switcher stays.
+#
+# Runs from the theme-set hook, and by hand after editing a wallpaper.
+# Usage: live-wallpaper <wallpaper> [variant]
+set -euo pipefail
+
+wallpapers=$(dirname "$(realpath "$0")")
+wallpaper=$1
+variant=${2:-}
+name=$wallpaper${variant:+-$variant}
+width=3840
+height=2400
+theme=$(cat "$HOME/.local/state/omarchy/current/theme.name")
+colors="$HOME/.local/state/omarchy/current/theme/colors.toml"
+cache="$HOME/.cache/live-wallpapers/$name"
+link="$HOME/.config/omarchy/backgrounds/$theme/$name.mp4"
+
+key=$({ cat "$wallpapers/$wallpaper"/*; cat "$colors"; echo "$variant ${width}x${height}"; } | sha256sum | cut -c1-16)
+video="$cache/$key.mp4"
+mkdir -p "$cache" "$(dirname "$link")"
+
+if [[ ! -f $video ]]; then
+  # A unique partial name lets two renders of the same video run side by
+  # side, and keeps a half-written file away from the player.
+  partial=$(mktemp "$cache/$key.XXXXXX.partial")
+  trap 'rm -f "$partial"' EXIT
+  "$wallpapers/$wallpaper/make-video" "$partial" "$width" "$height" "$colors" $variant
+  mv "$partial" "$video"
+fi
+
+ln -sfn "$video" "$link"
+
+current_background=$(readlink -f "$HOME/.local/state/omarchy/current/background")
+current_theme=$(cat "$HOME/.local/state/omarchy/current/theme.name")
+# The theme may have changed while rendering; then the render waits in the cache.
+if [[ $current_background == "$cache"/* && $current_background != "$video" && $current_theme == "$theme" ]]; then
+  omarchy theme bg set "$video"
+fi

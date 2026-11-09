@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Render one NeoWaves loop in the given theme colours (see ../live-wallpaper).
+# Usage: make-video <output.mp4> <width> <height> <colors.toml>
+set -euo pipefail
+
+here=$(dirname "$(realpath "$0")")
+output=$1
+width=$2
+height=$3
+colors=$4
+# The video must be exactly one loop long to repeat seamlessly.
+loop_seconds=$(grep -o '#define LOOP [0-9.]*' "$here/neowaves.glsl" | cut -d' ' -f3)
+shader=$(mktemp --suffix=.glsl)
+trap 'rm -f "$shader"' EXIT
+
+theme_color() {
+  local hex
+  hex=$(grep -m1 "^$1 *=" "$colors" | grep -o '#[0-9a-fA-F]\{6\}' | tr -d '#')
+  printf '(vec3(%d.0, %d.0, %d.0) / 255.0)' "$((16#${hex:0:2}))" "$((16#${hex:2:2}))" "$((16#${hex:4:2}))"
+}
+
+{
+  printf '//!HOOK MAIN\n//!BIND HOOKED\n//!DESC NeoWaves\n'
+  for name in blue magenta cyan orange red; do
+    printf '#define C_%s %s\n' "${name^^}" "$(theme_color "$name")"
+  done
+  cat "$here/neowaves.glsl"
+} >"$shader"
+
+# 10-bit HEVC on the Intel GPU keeps the dark glow free of banding.
+ffmpeg -v error -y -vaapi_device /dev/dri/by-path/pci-0000:00:02.0-render \
+  -f lavfi -i "color=black:s=${width}x${height}:r=30:d=$loop_seconds" \
+  -vf "format=yuv444p,libplacebo=custom_shader_path=$shader:format=p010le,hwupload" \
+  -c:v hevc_vaapi -profile:v main10 -rc_mode CQP -qp 20 -movflags +faststart -f mp4 "$output"
