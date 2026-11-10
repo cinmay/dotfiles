@@ -1,5 +1,9 @@
--- Keep VA-API decode on the Intel GPU that drives this hybrid laptop's display.
-hl.env("LIBVA_DRIVER_NAME", "iHD")
+-- Keep VA-API decode on the Intel GPU that drives the hybrid laptop's display.
+-- The desktop (stue-pc) has no Intel GPU, so there libva picks its own driver.
+local hostname = io.open("/etc/hostname"):read("l")
+if hostname == "resurrection" then
+  hl.env("LIBVA_DRIVER_NAME", "iHD")
+end
 
 local workspaces = {
   { id = 1, name = "home" },
