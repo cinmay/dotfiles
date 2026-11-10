@@ -94,6 +94,24 @@ sudo systemctl daemon-reload && sudo mount /mnt/extraDisk
 rmdir ~/Music && ln -s /mnt/extraDisk/Music ~/Music
 ```
 
+The laptop hands its Mandelbrot wallpaper renders to the desktop over SSH
+(see `omarchy/.config/omarchy/wallpapers/live-wallpaper`). On the desktop,
+start sshd and let the home network through Omarchy's firewall:
+
+```bash
+sudo systemctl enable --now sshd
+sudo ufw allow from 192.168.86.0/24 to any port 22 proto tcp comment 'ssh from LAN'
+```
+
+On the laptop, install its key on the desktop and trust the desktop's key
+under the router's name for it, `stue-pc.lan`. The script looks the address up
+again on every connection, since it can change:
+
+```bash
+ssh-copy-id cinmay@stue-pc.lan
+ssh -o HostKeyAlias=stue-pc.lan "cinmay@$(getent ahostsv4 stue-pc.lan | awk 'NR == 1 { print $1 }')" true
+```
+
 In Steam, add `/mnt/extraDisk/SteamLibrary` under Settings → Storage.
 
 ### WSL

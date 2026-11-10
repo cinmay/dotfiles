@@ -11,10 +11,18 @@ if [[ $previous_background == "$HOME/.cache/live-wallpapers/"* && -f $previous_b
   omarchy theme bg set "$previous_background"
 fi
 
-# A first render takes minutes and theme switches wait for their hooks, so
-# each wallpaper renders in its own background job.
+# A first render takes minutes to hours and theme switches wait for their
+# hooks, so each wallpaper renders in its own background job.
 # Logs: journalctl --user -u 'live-wallpaper-*'
-for wallpaper in "neowaves" "mandelbrot"; do
+start() {
   systemd-run --user --quiet --collect --unit="live-wallpaper-$(date +%s%N)" \
-    "$HOME/.config/omarchy/wallpapers/live-wallpaper" "$wallpaper"
-done
+    "$HOME/.config/omarchy/wallpapers/live-wallpaper" "$@"
+}
+
+# The Mandelbrot takes hours of CPU, so the laptop (resurrection) hands it to
+# the desktop to keep its fans quiet; it waits while the desktop is off.
+fractal_render_host=""
+[[ $HOSTNAME == resurrection ]] && fractal_render_host=stue-pc.lan
+
+start neowaves
+start mandelbrot $fractal_render_host

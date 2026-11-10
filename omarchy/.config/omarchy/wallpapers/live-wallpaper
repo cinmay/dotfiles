@@ -15,12 +15,22 @@
 # becomes the background when the same wallpaper is playing, so a background
 # picked in the switcher stays.
 #
+# With a render host, the video renders there instead, so the laptop's fans
+# stay quiet: the wallpaper's files and the theme's colours go over SSH,
+# make-video runs there as a systemd job, and the finished video comes back.
+# The host may be switched off, so the script keeps trying every
+# RETRY_SECONDS, looking its address up again each time since it can change.
+# The host's SSH key is checked under its name (HostKeyAlias), not its address.
+#
 # Runs from the theme-set hook, and by hand after editing a wallpaper.
-# Usage: live-wallpaper <wallpaper>
+# Usage: live-wallpaper <wallpaper> [render-host]
 set -euo pipefail
+
+RETRY_SECONDS=600
 
 wallpapers=$(dirname "$(realpath "$0")")
 wallpaper=$1
+render_host=${2:-}
 # Render at the monitor's size, so the loop plays sharp and unscaled.
 read -r width height < <(hyprctl monitors -j | jq -r '.[0] | "\(.width) \(.height)"')
 theme=$(cat "$HOME/.local/state/omarchy/current/theme.name")
@@ -32,12 +42,40 @@ key=$({ cat "$wallpapers/$wallpaper"/*; cat "$colors"; echo "${width}x${height}"
 video="$cache/$key.mp4"
 mkdir -p "$cache" "$(dirname "$link")"
 
+on_render_host() {
+  local address
+  address=$(getent ahostsv4 "$render_host" | awk 'NR == 1 { print $1 }')
+  [[ -n $address ]] && ssh -o BatchMode=yes -o ConnectTimeout=10 -o HostKeyAlias="$render_host" "$address" "$@"
+}
+
+# Renders on the render host into the file $1. A job already started there,
+# for instance before the laptop slept, is waited for rather than restarted.
+render_on_host() {
+  local job="live-wallpaper-for-$HOSTNAME-$key"  # the systemd unit there, and its folder
+  local folder=".cache/$job"
+  until on_render_host "test -f $folder/video.mp4" 2>/dev/null; do
+    if ! on_render_host "systemctl --user is-active --quiet $job" 2>/dev/null; then
+      tar -C "$wallpapers/$wallpaper" -cf - . | on_render_host "mkdir -p $folder/wallpaper && tar -C $folder/wallpaper -xf -" &&
+        on_render_host "cat > $folder/colors.toml" <"$colors" &&
+        on_render_host "systemd-run --user --quiet --collect --unit=$job bash -c 'cd ~/$folder && wallpaper/make-video video.partial $width $height colors.toml && mv video.partial video.mp4'" ||
+        true  # the host is off or unreachable: try again later
+    fi
+    sleep "$RETRY_SECONDS"
+  done
+  on_render_host "cat $folder/video.mp4" >"$1"
+  on_render_host "rm -r $folder"
+}
+
 if [[ ! -f $video ]]; then
   # A unique partial name lets two renders of the same video run side by
   # side, and keeps a half-written file away from the player.
   partial=$(mktemp "$cache/$key.XXXXXX.partial")
   trap 'rm -f "$partial"' EXIT
-  "$wallpapers/$wallpaper/make-video" "$partial" "$width" "$height" "$colors"
+  if [[ -n $render_host ]]; then
+    render_on_host "$partial"
+  else
+    "$wallpapers/$wallpaper/make-video" "$partial" "$width" "$height" "$colors"
+  fi
   mv "$partial" "$video"
 fi
 
