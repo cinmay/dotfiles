@@ -27,8 +27,14 @@ theme_color() {
   cat "$here/neowaves.glsl"
 } >"$shader"
 
-# 10-bit HEVC on the Intel GPU keeps the dark glow free of banding.
-ffmpeg -v error -y -vaapi_device /dev/dri/by-path/pci-0000:00:02.0-render \
+# Encode on the first GPU that is not NVIDIA's (the laptop's Intel, the
+# desktop's Radeon): its VA-API driver does 10-bit HEVC.
+for render_node in /dev/dri/renderD*; do
+  [[ $(basename "$(readlink -f "/sys/class/drm/${render_node##*/}/device/driver")") != nvidia ]] && break
+done
+
+# 10-bit HEVC keeps the dark glow free of banding.
+ffmpeg -v error -y -vaapi_device "$render_node" \
   -f lavfi -i "color=black:s=${width}x${height}:r=30:d=$loop_seconds" \
   -vf "format=yuv444p,libplacebo=custom_shader_path=$shader:format=p010le,hwupload" \
   -c:v hevc_vaapi -profile:v main10 -rc_mode CQP -qp 20 -movflags +faststart -f mp4 "$output"

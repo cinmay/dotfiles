@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Render one Mandelbrot loop in the given theme colours (see ../live-wallpaper
+# Render the Mandelbrot dive in the given theme colours (see ../live-wallpaper
 # and mandelbrot.c for how the loop and the keyframes work).
-# Usage: make-video <output.mp4> <width> <height> <colors.toml> <spiral|snowflake>
+# Usage: make-video <output.mp4> <width> <height> <colors.toml>
 set -euo pipefail
 
 here=$(dirname "$(realpath "$0")")
@@ -9,21 +9,13 @@ output=$1
 width=$2
 height=$3
 colors=$4
-variant=$5
-seconds=480
+seconds=900
 fps=30
 
-# Each variant is a Misiurewicz point and how to loop around it:
-#   centre (re im), preperiod, period, steps per loop, starting view width,
-#   iteration limit, palette length in escape counts.
-case $variant in
-  spiral) view=(-0.776610592599702 0.134608961675028 23 2 23 6e-7 20000 300) ;;
-  snowflake) view=(-0.101096363845622 0.956286510809142 4 1 3 1.2e-5 6000 150) ;;
-  *)
-    echo "Unknown Mandelbrot variant: $variant" >&2
-    exit 1
-    ;;
-esac
+# The minibrot the dive ends in, in seahorse valley, 1.5 million times smaller
+# than the whole set: nucleus (re im), period, iteration limit, palette length
+# in escape counts at the start.
+minibrot=(-0.742995642096812 0.133572422256623 65 200000 30)
 
 accents=()
 for name in blue magenta cyan orange red; do
@@ -34,11 +26,17 @@ program=$(mktemp)
 trap 'rm -f "$program"' EXIT
 gcc -O3 -march=native -fopenmp "$here/mandelbrot.c" -o "$program" -lm
 
-# 10-bit HEVC on the Intel GPU keeps the dark glow free of banding. Fractal
-# detail compresses poorly: QP 24 keeps the filaments crisp at about 2 GB per
-# spiral loop, where NeoWaves' QP 20 would take 5 GB.
-nice -n 10 "$program" "$width" "$height" "$seconds" "$fps" "${view[@]}" "${accents[@]}" |
-  ffmpeg -v error -y -vaapi_device /dev/dri/by-path/pci-0000:00:02.0-render \
+# Encode on the first GPU that is not NVIDIA's (the laptop's Intel, the
+# desktop's Radeon): its VA-API driver does 10-bit HEVC.
+for render_node in /dev/dri/renderD*; do
+  [[ $(basename "$(readlink -f "/sys/class/drm/${render_node##*/}/device/driver")") != nvidia ]] && break
+done
+
+# 10-bit HEVC keeps the dark glow free of banding. Fractal
+# detail compresses poorly: QP 24 keeps the filaments crisp at a quarter of
+# the size NeoWaves' QP 20 would take.
+nice -n 10 "$program" "$width" "$height" "$seconds" "$fps" "${minibrot[@]}" "${accents[@]}" |
+  ffmpeg -v error -y -vaapi_device "$render_node" \
     -f rawvideo -pix_fmt rgb48le -s "${width}x${height}" -r "$fps" -i - \
     -vf "scale=out_color_matrix=bt709:out_range=tv,format=p010le,hwupload" \
     -c:v hevc_vaapi -profile:v main10 -rc_mode CQP -qp 24 \
