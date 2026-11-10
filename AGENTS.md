@@ -16,6 +16,7 @@ This setup is a deliberate professional workspace for focus and personal excelle
 
 ## Project Structure & Module Organization
 - Reference docs and setup notes are in `README.md`
+- Two Omarchy machines share these dotfiles: the laptop `resurrection` (Dell XPS 15 9520) and the desktop `stue-pc`. Where they must differ, branch on the hostname in the file that owns the setting (see `omarchy/.config/hypr/autostart.lua`).
 - `packages.txt` lists packages the configs need beyond a fresh Omarchy install; add to it whenever a config starts depending on a new package.
 
 ## Build, Test, and Development Commands
