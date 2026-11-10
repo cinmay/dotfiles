@@ -28,13 +28,14 @@ theme_color() {
 } >"$shader"
 
 # Encode on the first GPU that is not NVIDIA's (the laptop's Intel, the
-# desktop's Radeon): its VA-API driver does 10-bit HEVC.
+# desktop's Radeon): its VA-API driver does 10-bit HEVC. LIBVA_DRIVER_NAME is
+# cleared so libva picks that GPU's own driver, whatever the session forces.
 for render_node in /dev/dri/renderD*; do
   [[ $(basename "$(readlink -f "/sys/class/drm/${render_node##*/}/device/driver")") != nvidia ]] && break
 done
 
 # 10-bit HEVC keeps the dark glow free of banding.
-ffmpeg -v error -y -vaapi_device "$render_node" \
+env -u LIBVA_DRIVER_NAME ffmpeg -v error -y -vaapi_device "$render_node" \
   -f lavfi -i "color=black:s=${width}x${height}:r=30:d=$loop_seconds" \
   -vf "format=yuv444p,libplacebo=custom_shader_path=$shader:format=p010le,hwupload" \
   -c:v hevc_vaapi -profile:v main10 -rc_mode CQP -qp 20 -movflags +faststart -f mp4 "$output"

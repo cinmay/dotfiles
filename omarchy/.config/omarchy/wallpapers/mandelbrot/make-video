@@ -27,7 +27,8 @@ trap 'rm -f "$program"' EXIT
 gcc -O3 -march=native -fopenmp "$here/mandelbrot.c" -o "$program" -lm
 
 # Encode on the first GPU that is not NVIDIA's (the laptop's Intel, the
-# desktop's Radeon): its VA-API driver does 10-bit HEVC.
+# desktop's Radeon): its VA-API driver does 10-bit HEVC. LIBVA_DRIVER_NAME is
+# cleared so libva picks that GPU's own driver, whatever the session forces.
 for render_node in /dev/dri/renderD*; do
   [[ $(basename "$(readlink -f "/sys/class/drm/${render_node##*/}/device/driver")") != nvidia ]] && break
 done
@@ -36,7 +37,7 @@ done
 # detail compresses poorly: QP 24 keeps the filaments crisp at a quarter of
 # the size NeoWaves' QP 20 would take.
 nice -n 10 "$program" "$width" "$height" "$seconds" "$fps" "${minibrot[@]}" "${accents[@]}" |
-  ffmpeg -v error -y -vaapi_device "$render_node" \
+  env -u LIBVA_DRIVER_NAME ffmpeg -v error -y -vaapi_device "$render_node" \
     -f rawvideo -pix_fmt rgb48le -s "${width}x${height}" -r "$fps" -i - \
     -vf "scale=out_color_matrix=bt709:out_range=tv,format=p010le,hwupload" \
     -c:v hevc_vaapi -profile:v main10 -rc_mode CQP -qp 24 \
