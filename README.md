@@ -94,8 +94,9 @@ sudo systemctl daemon-reload && sudo mount /mnt/extraDisk
 rmdir ~/Music && ln -s /mnt/extraDisk/Music ~/Music
 ```
 
-The laptop hands its Mandelbrot wallpaper renders to the desktop over SSH
-(see `omarchy/.config/omarchy/wallpapers/live-wallpaper`). On the desktop,
+The Mandelbrot wallpaper takes hours of CPU, so it renders only on request,
+and the laptop renders it on the desktop over SSH (see
+`omarchy/.config/omarchy/hooks/theme-set.d/live-wallpapers`). On the desktop,
 start sshd and let the home network through Omarchy's firewall:
 
 ```bash
