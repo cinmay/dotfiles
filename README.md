@@ -115,6 +115,24 @@ ssh -o HostKeyAlias=stue-pc.lan "cinmay@$(getent ahostsv4 stue-pc.lan | awk 'NR 
 
 In Steam, add `/mnt/extraDisk/SteamLibrary` under Settings → Storage.
 
+#### REAPER
+
+REAPER lives in `~/opt/REAPER`, installed from Cockos's tarball rather than
+Arch's `reaper` package, which trails the latest release. To install or
+update, take the newest `reaperNNN_linux_x86_64.tar.xz` from
+<https://www.reaper.fm/download.php> and run its installer; settings in
+`~/.config/REAPER` are kept:
+
+```bash
+tar -xf reaper*_linux_x86_64.tar.xz
+sh reaper_linux_x86_64/install-reaper.sh --install ~/opt --integrate-user-desktop
+```
+
+REAPER runs under XWayland, and Omarchy sets `force_zero_scaling`, so on the
+laptop's 2x display the UI is tiny. Under `[.swell]` in
+`~/.config/REAPER/reaper.ini` set `ui_scale=2.0`. That file is per machine,
+so the desktop keeps its own scale.
+
 ### WSL
 
 ```bash
