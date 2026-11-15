@@ -597,6 +597,16 @@ function M.is_buffer(buf)
 	return buf == history_buf or buf == prompt_buf or buf == request_buf
 end
 
+local function copilot_context()
+	local in_prompt = vim.api.nvim_get_current_buf() == prompt_buf
+	if not in_prompt or #state.entries == 0 or not vim.api.nvim_buf_is_valid(history_buf) then
+		return nil
+	end
+	-- Copilot's prompt is small, and the latest exchange matters most.
+	local history = table.concat(vim.api.nvim_buf_get_lines(history_buf, 0, -1, false), "\n")
+	return history:sub(-6000)
+end
+
 local chat_keymaps = {
 	{ "<leader>as", "send", "send prompt" },
 	{ "<leader>am", "models", "model, effort, and permission mode" },
@@ -636,6 +646,8 @@ local function show()
 			else
 				prompt_buf = buf
 				load_draft(draft_key())
+				-- Plugins load after setup(), so Copilot is reachable only from here.
+				require("custom.claude.copilot_context").provide(copilot_context)
 				vim.api.nvim_create_autocmd({ "BufLeave", "InsertLeave", "TextChanged" }, {
 					buffer = buf,
 					callback = save_draft,

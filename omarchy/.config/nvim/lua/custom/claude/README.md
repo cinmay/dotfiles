@@ -104,6 +104,21 @@ and a directory's file listing, so Claude does not need to read them first.
 From the prompt, mentions go in after the cursor; from the history, at the end
 of the draft. It works during a turn, since it only edits the draft.
 
+## Copilot in the prompt
+
+Copilot suggests as you type in the prompt, and it knows the conversation: each
+completion request carries the last 6000 characters of the history. Without it,
+Copilot sees only the prompt buffer, and suggestions for a new prompt are
+generic.
+
+copilot.lua cannot pass extra context, so `copilot_context.lua` wraps its
+completion requests and uses the Copilot server's context provider API: it
+registers a provider and enables it in the server settings on the first
+completion. The history goes in as a "trait"; code snippets were dropped by the
+server (1.393.0) in testing. This relies on copilot.lua internals, so after a
+copilot.lua update, check that suggestions in a new prompt still refer to the
+chat. The history is sent to GitHub's Copilot service with every completion.
+
 ## Permissions, questions, and plans
 
 Neovim passes no permission flags: the chat starts in the mode set in Claude
