@@ -36,6 +36,16 @@ A feature follows three steps (Kent Beck's tidy first):
 
 Keep structural changes and behavior changes in separate commits, so each can be reviewed on its own terms. Skip a step that is not needed.
 
+## Learning and flow
+
+The work has two halves, and lean thinking runs them differently.
+
+**Development is learning.** Until a change is merged we are finding out what to build and how, so go for the fastest feedback: a failing test, a screenshot, a spike, a slice I can try. When building something small would answer a question sooner than discussing it, propose that. Give feedback a place to happen: an environment that is easy to use and as close to production as we can make it, such as a preview for every pull request. Keep decisions cheap to reverse, and record the ones that matter with their why.
+
+**Delivery is a production line.** From merge to running in production nothing should vary: one automated path, the same checks every time, small batches released often. Keep the main branch releasable. A failing check stops the line, so fix it before starting anything else. A manual step in a release is a defect: write it down, then automate it. Where delivery performance matters, measure it with the four key metrics from Accelerate.
+
+**Keep improving how we work.** Processes and tooling degrade over time, as code does, so tidy and refactor them as we go. When you see an opening to improve how we work, take it: make a small improvement directly and propose a larger one. That includes these instructions: tell me when one no longer earns its place.
+
 ## Testing
 
 Test behavior, not implementation. Verify meaningful outcomes, important failure cases, and regressions. A test should keep passing when implementation details change and the behavior stays the same.
