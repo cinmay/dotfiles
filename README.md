@@ -148,6 +148,8 @@ stow -t "$HOME" claude
 
 The package holds `settings.json` and `CLAUDE.md`. `CLAUDE.md` is a link to [prompt-seed.md](prompt-seed.md), so Claude follows the same engineering practices in every project on the machine. A project opts out by saying so in its own `AGENTS.md`.
 
+`skills/kickoff` is the `/kickoff` skill: how a project is started or picked up again (start with why, a design journal, a spike, a retrospective, a lean `AGENTS.md`).
+
 ### Codex (all machines)
 
 ```bash
