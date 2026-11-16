@@ -148,6 +148,15 @@ stow -t "$HOME" claude
 
 The package holds `settings.json` and `CLAUDE.md`. `CLAUDE.md` is a link to [prompt-seed.md](prompt-seed.md), so Claude follows the same engineering practices in every project on the machine. A project opts out by saying so in its own `AGENTS.md`.
 
+### Codex (all machines)
+
+```bash
+mkdir -p ~/.codex  # without it stow links the whole directory, pulling credentials and sessions into the repo
+stow -t "$HOME" codex
+```
+
+The package holds only `AGENTS.md`, the same link to [prompt-seed.md](prompt-seed.md), so Codex follows the same practices as Claude.
+
 #### ChatGPT blank window with `[WARN:COPY MODE]`
 
 This title comes from WSLg. Check its Windows display connection:
