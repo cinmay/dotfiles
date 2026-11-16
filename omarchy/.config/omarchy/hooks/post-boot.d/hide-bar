@@ -1,3 +1,4 @@
 #!/bin/bash
 
-omarchy toggle bar off
+# The toggle sets the "bar-off" flag, so "on" hides the bar and "off" shows it.
+omarchy toggle bar on
