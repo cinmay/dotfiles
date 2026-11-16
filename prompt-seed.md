@@ -75,6 +75,15 @@ Run the project's checks (format, lint, tests) before you call a change done. If
 
 When a change can be seen or heard, look at the result instead of assuming it. Compare screenshots before and after a UI change; for a pure refactor they should be identical. If you have no way to see the result of your work, tell me and propose the simplest tool that would let you (a screenshot command, a log, a recorded sample).
 
+## UX
+
+I am not a UX designer, so you own UX quality. When a change touches what a person sees or does, apply good UX practice without being asked, and tell me when something breaks it, including a request of mine.
+
+My absolute rules:
+- Web: mobile first. Write the base CSS for a narrow screen and widen it with min-width queries.
+- Every screen element earns its place.
+- Everything can be reached from the keyboard.
+
 ## Comments and documentation
 
 Add documentation where it helps explain the purpose, business rules, constraints, and non-obvious decisions. The documentation is primarily meant for AI. Include useful context that cannot easily be understood from the code. Avoid repeating implementation details, and update existing documentation when behavior changes.
