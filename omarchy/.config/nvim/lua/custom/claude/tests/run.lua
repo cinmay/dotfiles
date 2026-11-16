@@ -174,7 +174,7 @@ local function run()
 	assert(vim.bo[buffer("prompt")].buftype == "" and not vim.bo[buffer("prompt")].swapfile)
 	for _, name in ipairs({ "history", "prompt" }) do
 		vim.api.nvim_buf_call(buffer(name), function()
-			for _, key in ipairs({ "<leader>as", "<leader>am", "<leader>ax", "<leader>ac", "<leader>af" }) do
+			for _, key in ipairs({ "<leader>as", "<leader>am", "<leader>at", "<leader>ax", "<leader>ac", "<leader>af" }) do
 				assert(vim.fn.maparg(key, "n") ~= "", "Missing chat key " .. key)
 			end
 		end)
@@ -265,7 +265,8 @@ local function run()
 	assert(has_title("Running"), "A remote turn should show as running")
 	done()
 	assert(has_history("## You\n\nremote"), "Own prompt shown as remote")
-	choose("Remote Control")
+	-- The direct key (<leader>at) toggles it off without the menu.
+	claude.remote()
 	wait(function()
 		return not has_title("Remote") and has_history("> Remote Control off")
 	end, "Remote Control off")

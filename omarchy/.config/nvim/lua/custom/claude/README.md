@@ -30,6 +30,7 @@ settings, `CLAUDE.md`, skills, plugins, and connectors.
 | | `:ClaudeResume <id>` | Resume a specific session |
 | `<leader>as` | `:ClaudeSend` | Send the prompt |
 | `<leader>am` | `:ClaudeModel` | Change model, effort, or permission mode |
+| `<leader>at` | `:ClaudeRemote` | Toggle Remote Control |
 | `<leader>ax` | `:ClaudeInterrupt` | Interrupt the running turn |
 | `<leader>ac` | `:ClaudeCommands` | Pick a slash command and run it |
 | `<leader>af` | `:ClaudeFiles` | Mention files or directories in the prompt |
@@ -70,9 +71,9 @@ apply to this chat only; Claude Code's settings files are not edited:
 ## Remote Control
 
 Remote Control lets you continue the chat from the Claude app on your phone or
-from claude.ai. It is off until you turn it on in the `<leader>am` menu, and it
-stays on until you turn it off or the chat's process ends (a new chat, a resume,
-or quitting Neovim). Turning it on adds the session link to the history as a
+from claude.ai. It is off until you turn it on with `<leader>at` (or the
+`<leader>am` menu), and it stays on until you turn it off or the chat's process
+ends (a new chat, a resume, or quitting Neovim). Turning it on adds the session link to the history as a
 notice, and the winbar shows `Remote` while the phone side is connected.
 
 Prompts sent from the phone appear in the history as `## You (remote)`, and the

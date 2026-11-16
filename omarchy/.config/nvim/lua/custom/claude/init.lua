@@ -610,6 +610,7 @@ end
 local chat_keymaps = {
 	{ "<leader>as", "send", "send prompt" },
 	{ "<leader>am", "models", "model, effort, and permission mode" },
+	{ "<leader>at", "remote", "toggle Remote Control" },
 	{ "<leader>ax", "interrupt", "interrupt turn" },
 	{ "<leader>ac", "commands", "slash commands" },
 	{ "<leader>af", "files", "mention files / directories" },
@@ -837,6 +838,23 @@ local function current_model()
 end
 
 -- One menu for the settings Claude lets a session change: model, effort, and permission mode.
+-- Remote Control is toggled often, so it has its own key besides the settings menu.
+function M.remote()
+	if not state.ready then
+		notify("Wait until the chat is ready")
+		M.open()
+		return
+	end
+	local enable = not state.remote_url
+	change("remote_control", { enabled = enable }, function(response)
+		state.remote_url = enable and response.session_url or nil
+		local text = enable and "Remote Control on: " .. tostring(response.session_url) or "Remote Control off"
+		add({ kind = "notice", text = text })
+		notify(text)
+		schedule_render()
+	end)
+end
+
 function M.models()
 	if not state.ready then
 		notify("Wait until the chat is ready")
@@ -900,16 +918,7 @@ function M.models()
 		},
 		{
 			label = "Remote Control: " .. (state.remote_url and "on" or "off"),
-			pick = function()
-				local enable = not state.remote_url
-				change("remote_control", { enabled = enable }, function(response)
-					state.remote_url = enable and response.session_url or nil
-					local text = enable and "Remote Control on: " .. tostring(response.session_url) or "Remote Control off"
-					add({ kind = "notice", text = text })
-					notify(text)
-					schedule_render()
-				end)
-			end,
+			pick = M.remote,
 		},
 	}
 	vim.ui.select(settings, {
@@ -1146,6 +1155,7 @@ function M.setup(opts)
 	vim.api.nvim_create_user_command("ClaudeSend", M.send, { desc = "Claude: send prompt" })
 	vim.api.nvim_create_user_command("ClaudeInterrupt", M.interrupt, { desc = "Claude: interrupt turn" })
 	vim.api.nvim_create_user_command("ClaudeModel", M.models, { desc = "Claude: model, effort, and permission mode" })
+	vim.api.nvim_create_user_command("ClaudeRemote", M.remote, { desc = "Claude: toggle Remote Control" })
 	vim.api.nvim_create_user_command("ClaudeCommands", M.commands, { desc = "Claude: slash commands" })
 	vim.api.nvim_create_user_command("ClaudeFiles", M.files, { desc = "Claude: mention files / directories" })
 	vim.api.nvim_create_user_command("ClaudeSessions", function(args)
