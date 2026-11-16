@@ -12,3 +12,6 @@ mpd
 mpc
 rmpc
 mpd-mpris
+
+# Untrusted browsing with a throwaway profile (omarchy/.local/bin/untrusted-browser.sh)
+firefox
