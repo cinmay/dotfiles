@@ -41,6 +41,8 @@ Keep structural changes and behavior changes in separate commits, so each can be
 Test behavior, not implementation. Verify meaningful outcomes, important failure cases, and regressions. A test should keep passing when implementation details change and the behavior stays the same.
 Tests exist to let agents change the code safely, not to reach a coverage number.
 
+Prefer test-driven development (TDD) or behavior-driven development (BDD) whenever possible. Write the test for the next behavior first, see it fail for the right reason, write the simplest code that makes it pass, then refactor while the tests stay green. With BDD, start from the user story: each acceptance criterion becomes a given-when-then test. When test-first is not practical, such as in a throwaway spike or while exploring how something should look or feel, say so, and write the tests as soon as the behavior settles.
+
 Write tests in given-when-then form so they read from intent to verification:
 - Start each test with three lines of BDD metadata that describe this test in plain words: Given some initial context, When an event occurs, Then the expected outcome. Use the project's BDD helper when it has one; otherwise use three comment lines.
 - Split the body into three visible sections: // Given, // When, // Then.
