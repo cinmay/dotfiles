@@ -146,6 +146,8 @@ mkdir -p ~/.claude  # without it stow links the whole directory, pulling credent
 stow -t "$HOME" claude
 ```
 
+The package holds `settings.json` and `CLAUDE.md`. `CLAUDE.md` is a link to [prompt-seed.md](prompt-seed.md), so Claude follows the same engineering practices in every project on the machine. A project opts out by saying so in its own `AGENTS.md`.
+
 #### ChatGPT blank window with `[WARN:COPY MODE]`
 
 This title comes from WSLg. Check its Windows display connection:
