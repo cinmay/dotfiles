@@ -1,0 +1,5 @@
+# cliamp keeps its state (history, resume point, log, credentials) next to its
+# config. Track only the config.
+*
+!.gitignore
+!config.toml

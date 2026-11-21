@@ -15,3 +15,6 @@ mpd-mpris
 
 # Untrusted browsing with a throwaway profile (omarchy/.local/bin/untrusted-browser.sh)
 firefox
+
+# cliamp signs in to YouTube Music with Chrome's cookies; yt-dlp reads their key from GNOME Keyring (omarchy/.config/cliamp)
+python-secretstorage

@@ -1,0 +1,16 @@
+# cliamp, the terminal music player. Reference:
+# https://github.com/bjarneo/cliamp/blob/main/docs/configuration.md
+
+# Open on YouTube Music instead of the built-in radio.
+provider = "ytmusic"
+
+# The file browser (o) starts in the local library, the same folder mpd serves.
+initial_directory = "~/Music"
+theme = ""
+
+# Sign in with the Chrome session (Omarchy's default browser), so no Google
+# Cloud OAuth client is needed. Playback goes through yt-dlp. Chrome encrypts
+# its cookies with a key in GNOME Keyring; yt-dlp can't detect that keyring
+# under Hyprland, so name it here.
+[ytmusic]
+cookies_from = "chrome+gnomekeyring"
